@@ -1,0 +1,218 @@
+services:
+  #  fastapi-service:
+  #    build:
+  #      context: .
+  #      dockerfile: Dockerfile
+  #    image: fastapi
+  #    container_name: fastapi
+  #    restart: unless-stopped
+  #    depends_on:
+  #      rabbitmq:
+  #        condition: service_healthy
+  #      weaviate:
+  #        condition: service_healthy
+  #      redis:
+  #        condition: service_healthy
+  #      mongodb:
+  #        condition: service_healthy
+  #    ports:
+  #      - "8001:8000"
+  #    networks:
+  #      - huudan
+  #    environment:
+  #      - MONGO_CONNECTION_STRING=mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@mongodb:27017/
+  #    volumes:
+  #      - ".:/usr/srv"
+  #      - weaviate-data:/usr/srv/data/weaviate
+  #    healthcheck:
+  #      test: [ "CMD", "curl", "-f", "http://localhost:8000/health" ]
+  #      interval: 30s
+  #      timeout: 10s
+  #      retries: 3
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: 'rabbitmq'
+    environment:
+      RABBITMQ_ERLANG_COOKIE: "SWQOKODSQALRPCLNMEQG"
+      RABBITMQ_DEFAULT_USER: "rabbitmq"
+      RABBITMQ_DEFAULT_PASS: "rabbitmq"
+      RABBITMQ_DEFAULT_VHOST: "/"
+    ports:
+      - 5672:5672
+      - 15672:15672
+    volumes:
+      # Ensure this path on your host is a directory
+      - "./enabled_plugins:/etc/rabbitmq/enabled_plugins"
+      - ~/.docker-conf/rabbitmq/data/:/var/lib/rabbitmq/
+      - ~/.docker-conf/rabbitmq/log/:/var/log/rabbitmq
+    networks:
+      - huudan
+    healthcheck:
+      test: [ "CMD", "rabbitmq-diagnostics", "check_port_connectivity" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+  minio:
+    image: minio/minio
+    volumes:
+      - ./data/minio-data:/data
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    networks:
+      - huudan
+    environment:
+      MINIO_ACCESS_KEY: "huudantran123@"
+      MINIO_SECRET_KEY: "huudantran123@"
+    command: server /data --console-address ":9001"
+
+  minio-bucket:
+    image: minio/mc
+    depends_on:
+      - minio
+    networks:
+      - huudan
+    entrypoint: >
+      /bin/sh -c "
+      sleep 10;
+      /usr/bin/mc config host add kltn2024 http://minio:9000 huudantran123@ huudantran123@;
+      /usr/bin/mc mb kltn2024/file-storage;
+      /usr/bin/mc policy download kltn2024/file-storage;
+      exit 0;
+      "
+  weaviate:
+    command:
+      - --host
+      - 0.0.0.0
+      - --port
+      - '8080'
+      - --scheme
+      - http
+    image: semitechnologies/weaviate:1.25.6
+    ports:
+      - "8080:8080"
+      - "50051:50051"
+    restart: on-failure
+    environment:
+      LOG_LEVEL: debug
+      LIMIT_RESOURCES: 'true'
+      PROMETHEUS_MONITORING_ENABLED: 'true'
+      QUERY_DEFAULTS_LIMIT: 25
+      AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: 'true'
+      PERSISTENCE_DATA_PATH: '/var/lib/weaviate'
+      CLUSTER_HOSTNAME: 'node1'
+      ASYNC_INDEXING: 'true'
+      AUTOSCHEMA_ENABLED: 'true'
+      REINDEX_SET_TO_ROARINGSET_AT_STARTUP: 'true'
+      USE_SENTENCE_TRANSFORMERS_VECTORIZER: 'true'
+      HNSW_STARTUP_WAIT_FOR_VECTOR_CACHE: 'true'
+      ENABLE_MODULES: 'text2vec-huggingface, generative-ollama,reranker-cohere,reranker-transformers,generative-openai,qna-openai,'
+      DEFAULT_VECTORIZER_MODULE: 'none'
+      RERANKER_INFERENCE_API: 'http://reranker-transformers:8080'
+    volumes:
+      - ./data/weaviate:/var/lib/weaviate
+    networks:
+      - huudan
+    healthcheck:
+      test: [ "CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/v1/.well-known/ready" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  reranker-transformers:
+    image: cr.weaviate.io/semitechnologies/reranker-transformers:cross-encoder-ms-marco-MiniLM-L-6-v2
+    environment:
+      ENABLE_CUDA: '0'
+    networks:
+      - huudan
+  prometheus:
+    image: prom/prometheus:v2.46.0
+    volumes:
+      - ./prometheus:/etc/prometheus/
+      - ./data/prometheus:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    ports:
+      - "9090:9090"
+    depends_on:
+      - weaviate
+    networks:
+      - huudan
+  grafana:
+    image: grafana/grafana-oss
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./grafana/grafana.ini:/etc/grafana/grafana.ini
+      - ./grafana/datasource.yml:/etc/grafana/provisioning/datasources/prometheus.yml
+      - ./grafana/dashboard_provider.yml:/etc/grafana/provisioning/dashboards/dashboards.yml
+      - ./grafana/dashboards:/var/lib/grafana/dashboards
+    depends_on:
+      - weaviate
+    networks:
+      - huudan
+  redis:
+    image: redis:latest
+    container_name: redis
+    ports:
+      - "6379:6379"
+    networks:
+      - huudan
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: redis-commander
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+    ports:
+      - "8081:8081"
+    depends_on:
+      - redis
+    networks:
+      - huudan
+  mongodb:
+    container_name: mongodb-sample
+    image: mongo:latest
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb-data:/data/db
+    env_file:
+      - .env
+    command: [ --auth ]
+    networks:
+      - huudan
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 30s
+      timeout: 10s
+      retries: 3
+  smtp-service:
+    image: axllent/mailpit
+    restart: unless-stopped
+    container_name: smtp
+    ports:
+      - "8025:8025"
+      - "1025:1025"
+    environment:
+      MP_MAX_MESSAGES: 5000
+      MP_SMTP_AUTH_ACCEPT_ANY: 1
+      MP_SMTP_AUTH_ALLOW_INSECURE: 1
+    networks:
+      - huudan
+
+networks:
+  huudan:
+    driver: bridge
+volumes:
+  mongodb-data:
+  weaviate-data:
+  rabbitmq-data:
+  rabbitmq-log:

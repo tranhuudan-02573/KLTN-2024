@@ -1,0 +1,187 @@
+from typing import Optional, List, Tuple
+from uuid import UUID
+
+import pymongo
+from fastapi import HTTPException
+
+from src.config.app_config import get_settings
+from src.dtos.schema_in.user import UserCreate, UserUpdate, UserChangePass
+from src.dtos.schema_out.bot import BotOut
+from src.dtos.schema_out.knowledge import KnowledgeOut
+from src.dtos.schema_out.user import UserOut, UserBotOut, UserKnowledgeOut
+from src.models.all_models import User
+from src.services.auth_service import get_password, verify_password
+from src.services.bot_service import BotService
+from src.services.jwt_service import refresh_tokens
+from src.utils.app_util import generate_random_password, get_random_avatar
+from src.utils.minio_util import delete_folder_from_minio
+
+settings = get_settings()
+
+
+class UserService:
+    @staticmethod
+    async def find_user(id: UUID):
+        user = await User.find_one(User.user_id == id)
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        return user
+
+    @staticmethod
+    async def create_user(user: UserCreate) -> UserOut:
+        try:
+            user_in = User(
+                username=user.username,
+                email=user.email,
+                role=user.role,
+                first_name=user.first_name,
+                last_name=user.last_name,
+                disabled=user.disabled,
+                hashed_password=get_password(generate_random_password()),
+                avatar=get_random_avatar(),
+                birth_date=user.birth_date,
+                gender=user.gender
+            )
+            u = await user_in.insert()
+            return UserOut(
+                user_id=u.user_id,
+                username=u.username,
+                email=u.email,
+                role=u.role,
+                first_name=u.first_name,
+                last_name=u.last_name,
+                disabled=u.disabled,
+                avatar=u.avatar,
+                birth_date=u.birth_date,
+                gender=u.gender,
+                created_at=u.created_at,
+                updated_at=u.updated_at
+            )
+        except pymongo.errors.DuplicateKeyError:
+            raise HTTPException(
+                status_code=400,
+                detail=" Bot with this name already exists. Please choose a different name."
+            )
+
+
+    @staticmethod
+    async def get_bots(u: User) -> UserBotOut:
+        await u.fetch_link(User.bots)
+        return UserBotOut(
+            user=UserOut(
+                user_id=u.user_id,
+                username=u.username,
+                email=u.email,
+                role=u.role,
+                first_name=u.first_name,
+                last_name=u.last_name,
+                disabled=u.disabled,
+                avatar=u.avatar,
+                birth_date=u.birth_date,
+                gender=u.gender,
+                created_at=u.created_at,
+                updated_at=u.updated_at
+            ),
+            bots=[BotOut(
+                bot_id=b.bot_id,
+                name=b.name,
+                avatar=b.avatar,
+                description=b.description,
+                is_active=b.is_active,
+                persona_prompt=b.persona_prompt,
+                is_memory_enabled=b.is_memory_enabled,
+                updated_at=b.updated_at,
+                created_at=b.created_at
+            ) for b in u.bots])
+
+    @staticmethod
+    async def get_knowledges(u: User) -> UserKnowledgeOut:
+        await u.fetch_link(User.knowledges)
+        return UserKnowledgeOut(
+            user=UserOut(
+                user_id=u.user_id,
+                username=u.username,
+                email=u.email,
+                role=u.role,
+                first_name=u.first_name,
+                last_name=u.last_name,
+                disabled=u.disabled,
+                avatar=u.avatar,
+                birth_date=u.birth_date,
+                gender=u.gender,
+                created_at=u.created_at,
+                updated_at=u.updated_at
+            ),
+            knowledges=[KnowledgeOut(
+                knowledge_id=k.knowledge_id,
+                name=k.name,
+                description=k.description,
+                created_at=k.created_at,
+                updated_at=k.updated_at
+            ) for k in u.knowledges]
+        )
+
+    @staticmethod
+    async def update_user(id: UUID, data: UserUpdate) -> UserOut:
+        user = await UserService.find_user(id)
+        user.first_name = data.first_name
+        user.last_name = data.last_name
+        user.gender = data.gender
+        user.birth_date = data.birth_date
+        user_i = await user.save()
+        return UserOut(**user_i.dict())
+
+    @staticmethod
+    async def change_pass(id: UUID, data: UserChangePass):
+        user = await UserService.find_user(id)
+        if not verify_password(data.old_password, user.hashed_password):
+            raise HTTPException(status_code=401, detail="Incorrect old password")
+        user.hashed_password = get_password(data.password)
+        if verify_password(data.password, user.hashed_password):
+            raise HTTPException(status_code=400, detail="New password cannot be the same as old password ")
+        rsi = await user.save()
+        rs = UserOut(**rsi.dict())
+        if data.is_logout:
+            if data.refresh_token:
+                rs = await refresh_tokens(data.refresh_token)
+            else:
+                raise HTTPException(status_code=400, detail="Refresh token is required to logout from all devices")
+        return rs
+
+    @staticmethod
+    async def get_all_users() -> List[UserOut]:
+        users = await User.find().to_list()
+        return [UserOut(**user.dict()) for user in users]
+
+    @staticmethod
+    async def search_users(
+            search_by: Optional[str],
+            search_value: Optional[str],
+            skip: int,
+            limit: int,
+            sort_by: str,
+            sort_order: str,
+    ) -> Tuple[List[UserOut], int]:
+        filter_query = {}
+        if search_by and search_value:
+            filter_query[search_by] = {"$regex": f".*{search_value}.*", "$options": "i"}
+
+        sort_direction = 1 if sort_order == "asc" else -1
+
+        total = await User.find(filter_query).count()
+
+        users = await User.find(filter_query).sort(
+            [(sort_by, sort_direction), ("_id", sort_direction)]
+        ).skip(skip).limit(limit).to_list()
+        users2 = [UserOut(**user.dict()) for user in users]
+        return users2, total
+
+    @staticmethod
+    async def change_avatar_random(user_id: UUID) -> UserOut:
+        user = await User.find_one(User.user_id == user_id)
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        avatar_url = get_random_avatar()
+        user.avatar = avatar_url
+        user_i = await user.save()
+        return UserOut(**user_i.dict())
