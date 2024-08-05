@@ -1,32 +1,32 @@
 services:
-  #  fastapi-service:
-  #    build:
-  #      context: .
-  #      dockerfile: Dockerfile
-  #    image: fastapi
-  #    container_name: fastapi
-  #    restart: unless-stopped
-  #    depends_on:
-  #      weaviate:
-  #        condition: service_healthy
-  #      redis:
-  #        condition: service_healthy
-  #      mongodb:
-  #        condition: service_healthy
-  #    ports:
-  #      - "8001:8000"
-  #    networks:
-  #      - huudan
-  #    environment:
-  #      - MONGO_CONNECTION_STRING=mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@mongodb:27017/
-  #    volumes:
-  #      - ".:/usr/srv"
-  #      - weaviate-data:/usr/srv/data/weaviate
-  #    healthcheck:
-  #      test: [ "CMD", "curl", "-f", "http://localhost:8000/health" ]
-  #      interval: 30s
-  #      timeout: 10s
-  #      retries: 3
+  fastapi-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: kltn
+    container_name: fastapi
+    restart: unless-stopped
+    depends_on:
+      weaviate:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+    ports:
+      - "8068:8068"
+    networks:
+      - huudan
+    environment:
+      - MONGO_CONNECTION_STRING=mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@mongodb:27017/
+    volumes:
+      - ".:/usr/srv"
+      - weaviate-data:/usr/srv/data/weaviate
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8000/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
   minio:
     image: minio/minio
     volumes:
