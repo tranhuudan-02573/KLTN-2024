@@ -26,3 +26,5 @@ minio
 langchain-huggingface
 pymupdf
 tiktoken
+transformers
+torch
