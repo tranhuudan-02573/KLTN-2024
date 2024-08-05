@@ -21,11 +21,6 @@
       - huudan
     volumes:
       - ".:/usr/srv"
-    healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:8068/health" ]
-      interval: 30s
-      timeout: 10s
-      retries: 3
   minio:
     image: minio/minio
     volumes:
