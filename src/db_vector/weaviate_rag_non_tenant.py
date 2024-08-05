@@ -30,9 +30,13 @@ CUSTOM_PROPERTIES = [
     "page_label"
 ]
 
+settings = get_settings()
+import tempfile
+
 
 def get_weaviate_client():
     client = weaviate.connect_to_local(
+        host=settings.WEAVIATE_HOST,
         headers={
             "X-HuggingFace-Api-Key": settings.HUGGINGFACE_API_KEY,
             "X-Cohere-Api-Key": settings.COHERE_API_KEY,
@@ -133,10 +137,6 @@ def clean_input(input_text: str) -> str:
     for pattern, replacement in compiled_patterns:
         text = pattern.sub(replacement, text)
     return unescape(text.strip())
-
-
-settings = get_settings()
-import tempfile
 
 
 def load_file(minio_client: Minio, file_type: str, path: str, temp_dir: str) -> List[LangchainDocument]:

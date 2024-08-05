@@ -33,10 +33,6 @@ class Settings(BaseSettings):
     USE_CREDENTIALS: bool = os.getenv('USE_CREDENTIALS')
     API_V1_STR: str = os.getenv('API_V1_STR')
     MONGO_CONNECTION_STRING: str = os.getenv('MONGO_CONNECTION_STRING')
-    MONGO_INITDB_ROOT_PASSWORD: str = os.getenv('MONGO_INITDB_ROOT_PASSWORD')
-    MONGO_INITDB_ROOT_USERNAME: str = os.getenv('MONGO_INITDB_ROOT_USERNAME')
-    MONGODB_HOST_NAME: str = os.getenv('MONGODB_HOST_NAME')
-    MONGODB_PORT: str = os.getenv('MONGODB_PORT')
     SECRET_KEY: str = os.getenv('SECRET_KEY')
     RESET_TOKEN_EXPIRE_MINUTES: int = os.getenv('RESET_TOKEN_EXPIRE_MINUTES')
     SESSION_RESET_TOKEN_EXPIRE_MINUTES: int = os.getenv('SESSION_RESET_TOKEN_EXPIRE_MINUTES')
@@ -51,6 +47,7 @@ class Settings(BaseSettings):
     COHERE_API_KEY: str = os.getenv('COHERE_API_KEY')
     SERVER_IP: str = os.getenv('SERVER_IP')
     MINIO_PORT: int = os.getenv('MINIO_PORT')
+    WEAVIATE_HOST: str = os.getenv('WEAVIATE_HOST')
 
     class Config:
         env_file = env_path
