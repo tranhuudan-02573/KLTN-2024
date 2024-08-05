@@ -93,6 +93,7 @@ celerybeat.pid
 
 # Environments
 .env
+.env2
 .venv
 env/
 venv/
@@ -133,3 +134,4 @@ cython_debug/
 # MacOS
 .DS_Store
 data/
+/src/db_vector/evaluate
