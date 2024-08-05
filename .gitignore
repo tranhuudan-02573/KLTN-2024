@@ -133,3 +133,4 @@ cython_debug/
 # MacOS
 .DS_Store
 data/
+/src/db_vector/evaluate
