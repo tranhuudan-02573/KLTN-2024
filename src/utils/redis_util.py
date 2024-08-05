@@ -6,9 +6,11 @@ from uuid import UUID
 
 import redis
 
+from src.config.app_config import get_settings
 from src.dtos.schema_in.query import ConversationItem
 
-redis_client = redis.StrictRedis(host='localhost', port=6379, db=0, decode_responses=True)
+settings = get_settings()
+redis_client = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, db=0, decode_responses=True)
 
 
 def is_allowed(key: str, max_calls: int, time_frame: int) -> bool:
@@ -118,5 +120,6 @@ def delete_user_history_chat(user_id: str, chat_id: str):
     key = f"user:{user_id}:chat:{chat_id}"
     redis_client.delete(key)
 
+
 if __name__ == '__main__':
-    print(convert_chat_history_to_items("e3e556eb-273b-4ed4-9021-a0ba90c3c42c","3bad30e8-ac66-4103-b5df-2c9c00eac45a"))
+    print(convert_chat_history_to_items("e3e556eb-273b-4ed4-9021-a0ba90c3c42c", "3bad30e8-ac66-4103-b5df-2c9c00eac45a"))
