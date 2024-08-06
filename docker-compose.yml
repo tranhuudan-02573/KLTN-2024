@@ -22,6 +22,8 @@
     volumes:
       - ".:/usr/srv"
   minio:
+    container_name: minio
+    restart: on-failure
     image: minio/minio
     volumes:
       - minio-data:/data
@@ -30,9 +32,11 @@
       - "9001:9001"
     networks:
       - huudan
+    env_file:
+      - .env
     environment:
-      MINIO_ACCESS_KEY: "huudantran123@"
-      MINIO_SECRET_KEY: "huudantran123@"
+      MINIO_ACCESS_KEY: ${ACCESS_KEY_MINIO}
+      MINIO_SECRET_KEY: ${SECRET_ACCESS_KEY_MINIO}
     command: server /data --console-address ":9001"
   reranker-transformers:
     image: cr.weaviate.io/semitechnologies/reranker-transformers:cross-encoder-ms-marco-MiniLM-L-6-v2
@@ -124,6 +128,7 @@
   redis:
     image: redis:latest
     container_name: redis
+    restart: on-failure
     ports:
       - "6379:6379"
     networks:
@@ -133,27 +138,19 @@
       interval: 10s
       timeout: 5s
       retries: 3
-  redis-commander:
-    image: rediscommander/redis-commander:latest
-    container_name: redis-commander
-    environment:
-      - REDIS_HOSTS=local:redis:6379
-    ports:
-      - "8081:8081"
-    depends_on:
-      - redis
-    networks:
-      - huudan
   mongodb:
-    container_name: mongodb-sample
+    container_name: mongodb
     image: mongo:latest
-    restart: always
+    restart: on-failure
     ports:
       - "27017:27017"
     volumes:
       - mongodb-data:/data/db
     env_file:
       - .env
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
     command: [ --auth ]
     networks:
       - huudan
