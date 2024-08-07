@@ -30,42 +30,41 @@ CUSTOM_PROPERTIES = [
     "after_clean", "source",
     "page_label"
 ]
-weaviate_client = None
 settings = get_settings()
 import tempfile
 
+weaviate_client = None
 
-# def get_weaviate_client():
-#     client = weaviate.connect_to_local(
-#         host=settings.WEAVIATE_HOST,
-#         headers={
-#             "X-HuggingFace-Api-Key": settings.HUGGINGFACE_API_KEY,
-#             "X-Cohere-Api-Key": settings.COHERE_API_KEY,
-#             "X-OpenAI-Api-Key": settings.OPENAI_API_KEY
-#         },
-#         skip_init_checks=True,
-#         additional_config=AdditionalConfig(
-#             timeout=Timeout(init=2, query=100000, insert=100000)
-#         )
-#     )
-#     return client
+
+def create_weaviate_client():
+    return weaviate.connect_to_weaviate_cloud(
+        cluster_url=settings.WEAVIATE_CLUSTER_URL,
+        auth_credentials=Auth.api_key(settings.WEAVIATE_API_KEY),
+        skip_init_checks=True,
+        headers={
+            "X-HuggingFace-Api-Key": settings.HUGGINGFACE_API_KEY,
+            "X-Cohere-Api-Key": settings.COHERE_API_KEY,
+            "X-OpenAI-Api-Key": settings.OPENAI_API_KEY
+        },
+        additional_config=AdditionalConfig(
+            timeout=Timeout(init=2, query=120, insert=300)
+        )
+    )
+
+
+@contextmanager
 def get_weaviate_client():
     global weaviate_client
     if weaviate_client is None:
-        weaviate_client = weaviate.connect_to_weaviate_cloud(
-            cluster_url=settings.WEAVIATE_CLUSTER_URL,
-            auth_credentials=Auth.api_key(settings.WEAVIATE_API_KEY),
-            skip_init_checks=True,
-            headers={
-                "X-HuggingFace-Api-Key": settings.HUGGINGFACE_API_KEY,
-                "X-Cohere-Api-Key": settings.COHERE_API_KEY,
-                "X-OpenAI-Api-Key": settings.OPENAI_API_KEY
-            },
-            additional_config=AdditionalConfig(
-                timeout=Timeout(init=2, query=120, insert=300)
-            )
-        )
-        return weaviate_client
+        weaviate_client = create_weaviate_client()
+    try:
+        yield weaviate_client
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        weaviate_client = None
+        raise
+    finally:
+        pass
 
 
 def create_for_user(document):
