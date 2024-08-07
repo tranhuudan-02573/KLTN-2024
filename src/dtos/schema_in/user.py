@@ -9,7 +9,6 @@ from src.models.all_models import UserRole, GenderType
 
 class UserAuth(PasswordMixin):
     email: EmailStr = Field(..., description="user email")
-    username: constr(min_length=5, max_length=50) = Field(..., description="user username")
 
 
 class UserCreate(BaseModel):
