@@ -27,6 +27,7 @@ from src.models.all_models import User
 from src.security import get_current_user
 from src.services.chat_service import ChatService
 from src.services.query_service import QueryService
+from src.utils.minio_util import create_bucket_if_not_exist
 
 # Initialize FastAPI application and settings
 settings = get_settings()
@@ -149,6 +150,7 @@ async def startup_event():
         database=db_client,
         document_models=[Knowledge, Bot, Query, User, Chat, File]
     )
+    create_bucket_if_not_exist()
 
 
 async def log_request_middleware(request: Request, call_next):

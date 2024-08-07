@@ -9,6 +9,7 @@ from fastapi import HTTPException
 from langchain.docstore.document import Document as LangchainDocument
 from langchain_community.document_loaders import PyMuPDFLoader, TextLoader, Docx2txtLoader
 from minio import Minio
+from weaviate.auth import Auth
 from weaviate.classes.config import Property, DataType
 from weaviate.classes.query import Filter
 from weaviate.classes.query import Sort
@@ -34,17 +35,32 @@ settings = get_settings()
 import tempfile
 
 
+# def get_weaviate_client():
+#     client = weaviate.connect_to_local(
+#         host=settings.WEAVIATE_HOST,
+#         headers={
+#             "X-HuggingFace-Api-Key": settings.HUGGINGFACE_API_KEY,
+#             "X-Cohere-Api-Key": settings.COHERE_API_KEY,
+#             "X-OpenAI-Api-Key": settings.OPENAI_API_KEY
+#         },
+#         skip_init_checks=True,
+#         additional_config=AdditionalConfig(
+#             timeout=Timeout(init=2, query=100000, insert=100000)
+#         )
+#     )
+#     return client
 def get_weaviate_client():
-    client = weaviate.connect_to_local(
-        host=settings.WEAVIATE_HOST,
+    client = weaviate.connect_to_weaviate_cloud(
+        cluster_url=settings.WEAVIATE_CLUSTER_URL,
+        auth_credentials=Auth.api_key(settings.WEAVIATE_API_KEY),
+        skip_init_checks=True,
         headers={
             "X-HuggingFace-Api-Key": settings.HUGGINGFACE_API_KEY,
             "X-Cohere-Api-Key": settings.COHERE_API_KEY,
             "X-OpenAI-Api-Key": settings.OPENAI_API_KEY
         },
-        skip_init_checks=True,
         additional_config=AdditionalConfig(
-            timeout=Timeout(init=2, query=100000, insert=100000)
+            timeout=Timeout(init=2, query=120, insert=300)
         )
     )
     return client
@@ -170,7 +186,7 @@ def clean_file_content(index: int, file: LangchainDocument, file_path: str, url:
 
 def load_and_clean_file(file_type: str, file_path: str, url: str) -> List[LangchainDocument]:
     minio_client = Minio(
-        f"{settings.SERVER_IP}:{settings.MINIO_PORT}",
+        f"{settings.MINIO_HOST}:{settings.MINIO_PORT}",
         access_key=settings.ACCESS_KEY_MINIO,
         secret_key=settings.SECRET_ACCESS_KEY_MINIO,
         secure=False,
@@ -196,8 +212,6 @@ def batch_import_knowledge_in_user(document_name: str, knowledge_name: str, file
     file_type2 = file_name.split(".")[-1]
 
     with get_weaviate_client() as weaviate_client:
-        if not weaviate_client.collections.exists(document_name):
-            create_for_user(document_name)
         collection = weaviate_client.collections.get(document_name)
 
         data_rows = [

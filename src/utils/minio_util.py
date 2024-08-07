@@ -9,7 +9,7 @@ settings = get_settings()
 bucket_name = settings.BUCKET_NAME
 
 minio_client = Minio(
-    f"{settings.SERVER_IP}:{settings.MINIO_PORT}",
+    f"{settings.MINIO_HOST}:{settings.MINIO_PORT}",
     access_key=settings.ACCESS_KEY_MINIO,
     secret_key=settings.SECRET_ACCESS_KEY_MINIO,
     secure=False  # Set to True if you are using HTTPS,
@@ -176,52 +176,3 @@ def read_file_as_bytes(file_path):
     with open(file_path, 'rb') as file:
         file_bytes = file.read()
     return file_bytes
-
-
-def main():
-    local_file_path = "../../resources/d.pdf"  # Change this path accordingly
-    file_bytes = read_file_as_bytes(local_file_path)
-
-    # Create bucket if it doesn't exist
-    print("\n1. Tạo bucket:")
-    create_bucket_if_not_exist()
-    print("Bucket đã được tạo hoặc đã tồn tại.")
-
-    # Upload file
-    print("\n2. Upload file:")
-    url, minio_file_path = upload_to_minio("documents", "pdf", local_file_path)
-    print(f"File đã được upload. URL: {url}")
-
-    # Check file existence
-    print("\n3. Kiểm tra file tồn tại:")
-    exists = check_file_exists(minio_file_path)
-    print(f"File {minio_file_path} tồn tại: {exists}")
-
-    # Upload file with counter
-    print("\n4. Upload file với counter:")
-    url, path = upload_file_to_minio_with_counter("test", "user1", "folder1", file_bytes, "test_file.pdf", "pdf")
-    print(f"File đã được upload với counter. URL: {url}")
-
-    # Upload avatar
-    print("\n5. Upload avatar:")
-    avatar_url, avatar_path = upload_user_avatar_to_minio("user1", file_bytes, "avatar.jpg")
-    print(f"Avatar đã được upload. URL: {avatar_url}")
-    print("\n5. Upload avatar:")
-    avatar_url, avatar_path = upload_bot_avatar_to_minio("user1", "bot1", file_bytes, "avatar.jpg")
-    print(f"Avatar đã được upload. URL: {avatar_url}")
-
-    # Upload file knowledge
-    print("\n6. Upload file knowledge:")
-    knowledge_url, knowledge_path = upload_file_knowledge_to_minio("knowledge", "user1", "topic1",
-                                                                   file_bytes, "knowledge.pdf", "pdf")
-    print(f"File knowledge đã được upload. URL: {knowledge_url}")
-
-
-if __name__ == "__main__":
-    main()
-    # folder_path = "user1/"
-    # delete_folder_success = delete_folder_from_minio(folder_path)
-    # print(f"Xóa folder {folder_path}: {'Thành công' if delete_folder_success else 'Thất bại'}")
-    # print("\n7. Xóa file:")
-    # delete_success = delete_from_minio(minio_file_path)
-    # print(f"Xóa file {minio_file_path}: {'Thành công' if delete_success else 'Thất bại'}")

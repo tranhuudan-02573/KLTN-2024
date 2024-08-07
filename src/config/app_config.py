@@ -52,6 +52,9 @@ class Settings(BaseSettings):
     SERVER_IP: str = os.getenv('SERVER_IP')
     MINIO_PORT: int = os.getenv('MINIO_PORT')
     WEAVIATE_HOST: str = os.getenv('WEAVIATE_HOST')
+    WEAVIATE_API_KEY: str = os.getenv('WEAVIATE_API_KEY')
+    WEAVIATE_CLUSTER_URL: str = os.getenv('WEAVIATE_CLUSTER_URL')
+    MINIO_HOST: str = os.getenv('MINIO_HOST')
 
     class Config:
         env_file = env_path
