@@ -137,4 +137,3 @@ async def forgot_password(email: EmailStr, background_tasks: BackgroundTasks):
 async def verify_token(email: str, token: str):
     user = await AuthService.verify_token(email, token)
     return user
-

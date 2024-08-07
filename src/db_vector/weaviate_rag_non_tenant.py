@@ -30,7 +30,7 @@ CUSTOM_PROPERTIES = [
     "after_clean", "source",
     "page_label"
 ]
-
+weaviate_client = None
 settings = get_settings()
 import tempfile
 
@@ -50,20 +50,22 @@ import tempfile
 #     )
 #     return client
 def get_weaviate_client():
-    client = weaviate.connect_to_weaviate_cloud(
-        cluster_url=settings.WEAVIATE_CLUSTER_URL,
-        auth_credentials=Auth.api_key(settings.WEAVIATE_API_KEY),
-        skip_init_checks=True,
-        headers={
-            "X-HuggingFace-Api-Key": settings.HUGGINGFACE_API_KEY,
-            "X-Cohere-Api-Key": settings.COHERE_API_KEY,
-            "X-OpenAI-Api-Key": settings.OPENAI_API_KEY
-        },
-        additional_config=AdditionalConfig(
-            timeout=Timeout(init=2, query=120, insert=300)
+    global weaviate_client
+    if weaviate_client is None:
+        weaviate_client = weaviate.connect_to_weaviate_cloud(
+            cluster_url=settings.WEAVIATE_CLUSTER_URL,
+            auth_credentials=Auth.api_key(settings.WEAVIATE_API_KEY),
+            skip_init_checks=True,
+            headers={
+                "X-HuggingFace-Api-Key": settings.HUGGINGFACE_API_KEY,
+                "X-Cohere-Api-Key": settings.COHERE_API_KEY,
+                "X-OpenAI-Api-Key": settings.OPENAI_API_KEY
+            },
+            additional_config=AdditionalConfig(
+                timeout=Timeout(init=2, query=120, insert=300)
+            )
         )
-    )
-    return client
+        return weaviate_client
 
 
 def create_for_user(document):
@@ -416,26 +418,3 @@ def read_object_by_id(docname, id):
             )
             # print(data_object)
             return data_object.properties
-
-
-import time
-
-if __name__ == '__main__':
-    # document_name = "dev_up"
-    document_name = "embebu"
-    file_type = "minio"
-    file_path = "d.pdf"
-    # batch_import_knowledge_in_user("huudan", document_name, file_type, file_path, None)
-    # print(search_in_knowledge_user("huudan", "Cấu trúc số 10 là gì?", [document_name]))
-    # aggregate_document(document_name )
-    # get_all_knowledge_in_user(document_name)
-    # delete_object_db(document_name, None, "huudan/pdf/2024-07-04/a_4.pdf")
-    # delete_collection(document_name )
-    # get_all_document()
-    # get_weaviate_client().collections.delete(["embebu"])
-    # print(get_all_user())
-    # print(aggregate_for_user("Huudan"))
-    timstart = time.time()
-    # get_all_chunk_in_file("huudan", "embebu", "huudan/minio/2024-07-30/d_1.pdf")
-    print(read_object_by_id("huudan", "a780d193-e28e-56c7-acdb-bad6d5439a58"))
-    print(time.time() - timstart)

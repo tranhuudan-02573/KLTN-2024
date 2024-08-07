@@ -10,7 +10,7 @@ from src.db_vector.weaviate_rag_non_tenant import get_weaviate_client, create_fo
 from src.dtos.schema_in.user import UserAuth
 from src.models.all_models import User, UserRole, Auth
 from src.services.jwt_service import get_password, verify_password, logout
-from src.utils.app_util import get_random_avatar, unique_string, generate_unique_code
+from src.utils.app_util import get_random_avatar, unique_string, generate_unique_code, generate_username
 from src.utils.redis_util import update, reset, is_allowed
 
 settings = get_settings()
@@ -47,8 +47,9 @@ class AuthService:
                 is_verified=False,
                 verification_token=unique_string(),
             )
+            username = generate_username(user.email)
             user_in = User(
-                username=user.username,
+                username=username,
                 email=user.email,
                 hashed_password=get_password(user.password),
                 role=UserRole.USER,
@@ -57,13 +58,13 @@ class AuthService:
             )
             await user_in.insert()
             with get_weaviate_client() as weaviate_client:
-                if not weaviate_client.collections.exists(user.username):
-                    create_for_user(user.username)
+                if not weaviate_client.collections.exists(username):
+                    create_for_user(username)
             return user_in
         except pymongo.errors.DuplicateKeyError:
             raise HTTPException(
                 status_code=400,
-                detail=" Bot with this name already exists. Please choose a different name."
+                detail="Email already registered"
             )
 
     @staticmethod

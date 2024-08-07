@@ -1,4 +1,3 @@
-import hashlib
 import random
 import re
 import secrets
@@ -26,7 +25,6 @@ def strip_non_letters(s: str) -> str:
 
 
 def count_token(string: str) -> int:
-    """Count tokens in a string using the 'gpt-3.5-turbo' model."""
     encoding = tiktoken.encoding_for_model("gpt-3.5-turbo")
     return len(encoding.encode(string))
 
@@ -125,6 +123,16 @@ settings = get_settings()
 
 def get_key_name_s3(value: str):
     return value.replace("https://d6ew9gb5lrjk9.cloudfront.net", "")
+
+
+import hashlib
+
+
+def generate_username(email):
+    local_part, domain = email.split('@')
+    domain_hash = hashlib.md5(domain.encode()).hexdigest()[:5]
+    username = f"User_{local_part}_{domain_hash}"
+    return username
 
 
 def get_key_name_minio(value: str):
