@@ -187,8 +187,8 @@ def clean_file_content(index: int, file: LangchainDocument, file_path: str, url:
 def load_and_clean_file(file_type: str, file_path: str, url: str) -> List[LangchainDocument]:
     minio_client = Minio(
         f"{settings.MINIO_HOST}:{settings.MINIO_PORT}",
-        access_key=settings.ACCESS_KEY_MINIO,
-        secret_key=settings.SECRET_ACCESS_KEY_MINIO,
+        access_key=settings.MINIO_ACCESS_KEY,
+        secret_key=settings.MINIO_SECRET_ACCESS_KEY,
         secure=False,
         region=settings.REGION_NAME,
     )

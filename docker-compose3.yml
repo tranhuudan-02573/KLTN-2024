@@ -9,9 +9,11 @@ services:
     container_name: fastapi
     restart: unless-stopped
     depends_on:
-      minio:
-        condition: service_healthy
       redis:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+      minio:
         condition: service_healthy
     ports:
       - "8068:8068"
@@ -21,6 +23,12 @@ services:
       - huudan
     volumes:
       - ".:/usr/srv"
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8068/docs" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
   minio:
     container_name: minio
     restart: on-failure
@@ -35,8 +43,8 @@ services:
     env_file:
       - .env
     environment:
-      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY}
-      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_ACCESS_KEY}
+      MINIO_ACCESS_KEY: ${ACCESS_KEY_MINIO}
+      MINIO_SECRET_KEY: ${SECRET_ACCESS_KEY_MINIO}
     command: server /data --console-address ":9001"
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:9000/minio/health/live" ]
@@ -58,18 +66,12 @@ services:
       /usr/bin/mc policy download kltn2024/file-storage;
       exit 0;
       "
-  
   redis:
     image: redis:latest
     container_name: redis
     restart: on-failure
-    depends_on:
-      - redis-insight
     ports:
       - "6379:6379"
-    env_file:
-      - .env
-    command: /bin/sh -c "redis-server --requirepass $$REDIS_PASSWORD"
     networks:
       - huudan
     healthcheck:
@@ -77,18 +79,33 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
-  
-  redis-insight:
-    image: redis/redisinsight:latest
+
+  mongodb:
+    container_name: mongodb
+    image: mongo:latest
     restart: on-failure
     ports:
-      - "5540:5540"
+      - "27017:27017"
     volumes:
-      - redis-insight:/data
+      - mongodb-data:/data/db
+    env_file:
+      - .env
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+    command: [ "--auth" ]
+    networks:
+      - huudan
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
 networks:
   huudan:
     driver: bridge
 
 volumes:
+  mongodb-data:
   minio-data:
-  redis-insight:

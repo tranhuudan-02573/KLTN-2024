@@ -10,8 +10,8 @@ bucket_name = settings.BUCKET_NAME
 
 minio_client = Minio(
     f"{settings.MINIO_HOST}:{settings.MINIO_PORT}",
-    access_key=settings.ACCESS_KEY_MINIO,
-    secret_key=settings.SECRET_ACCESS_KEY_MINIO,
+    access_key=settings.MINIO_ACCESS_KEY,
+    secret_key=settings.MINIO_SECRET_ACCESS_KEY,
     secure=False  # Set to True if you are using HTTPS,
     , region=settings.REGION_NAME,
 )

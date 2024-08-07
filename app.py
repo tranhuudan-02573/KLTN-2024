@@ -145,11 +145,14 @@ async def validation_exception_handler(request: Request, exc: Exception):
 
 
 async def startup_event():
-    db_client = AsyncIOMotorClient(settings.MONGO_CONNECTION_STRING).kltn
-    await init_beanie(
-        database=db_client,
-        document_models=[Knowledge, Bot, Query, User, Chat, File]
-    )
+    try:
+        db_client = AsyncIOMotorClient(settings.MONGO_CONNECTION_STRING).kltn
+        await init_beanie(
+            database=db_client,
+            document_models=[Knowledge, Bot, Query, User, Chat, File]
+        )
+    except Exception as e:
+        print(f"An error occurred: {e}")
     create_bucket_if_not_exist()
 
 
