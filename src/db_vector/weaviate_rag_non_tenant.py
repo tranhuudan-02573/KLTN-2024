@@ -16,7 +16,7 @@ from weaviate.classes.query import Sort
 from weaviate.collections.classes.aggregate import GroupByAggregate
 from weaviate.config import Timeout, AdditionalConfig
 from weaviate.util import generate_uuid5
-
+from contextlib import contextmanager
 from src.config.app_config import get_settings
 from src.db_vector.utils import generate_embeddings, get_recursive_token_chunk
 from src.dtos.schema_out.knowledge import ChunkOut
