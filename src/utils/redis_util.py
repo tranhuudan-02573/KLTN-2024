@@ -10,7 +10,9 @@ from src.config.app_config import get_settings
 from src.dtos.schema_in.query import ConversationItem
 
 settings = get_settings()
-redis_client = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, db=0, decode_responses=True)
+redis_client = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT,
+                                 password=settings.REDIS_PASSWORD, db=0,
+                                 decode_responses=True)
 
 
 def is_allowed(key: str, max_calls: int, time_frame: int) -> bool:
