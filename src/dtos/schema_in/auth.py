@@ -23,3 +23,7 @@ class TokenPayload(BaseModel):
     sub: Optional[UUID] = None
     exp: Optional[int] = None
     role: Optional[str] = None
+
+
+class RefreshTokenPayload(BaseModel):
+    token: str
