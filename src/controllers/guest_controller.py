@@ -8,7 +8,8 @@ from starlette.responses import JSONResponse
 
 from src.config.app_config import get_settings
 from src.config.email_config import send_email
-from src.dtos.schema_in.auth import TokenPayload, ResendVerifyToken, AcceptResetTokenPayload, VerifyResetTokenPayload
+from src.dtos.schema_in.auth import TokenPayload, ResendVerifyToken, AcceptResetTokenPayload, VerifyResetTokenPayload, \
+    RefreshTokenPayload
 from src.dtos.schema_in.user import UserAuth
 from src.dtos.schema_out.auth import TokenOut
 from src.dtos.schema_out.user import UserOut
@@ -58,9 +59,9 @@ async def register(data: UserAuth, background_tasks: BackgroundTasks):
 
 
 @guest_router.post('/refresh-token', summary="Refresh token", response_model=TokenOut)
-async def refresh_token(refresh_token: str = Body(...)):
+async def refresh_token(refresh_token: RefreshTokenPayload):
     try:
-        payload = jwt.decode(refresh_token, settings.JWT_REFRESH_SECRET_KEY, algorithms=[settings.ALGORITHM])
+        payload = jwt.decode(refresh_token.token, settings.JWT_REFRESH_SECRET_KEY, algorithms=[settings.ALGORITHM])
         token_data = TokenPayload(**payload)
     except (jwt.JWTError, ValidationError):
         raise HTTPException(
