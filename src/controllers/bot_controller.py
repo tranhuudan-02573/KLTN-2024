@@ -45,21 +45,6 @@ async def delete_bot(id: UUID, user: User = Depends(get_current_user)):
     return JSONResponse(content={"message": "Bot deleted successfully"}, status_code=200)
 
 
-@bot_router.put('/{bot_id}/toggle-active', summary="Toggle bot status", response_model=BotOut)
-async def toggle_bot_status(bot_id: UUID, user: User = Depends(get_current_user_admin)):
-    return await BotService.toggle_bot_status(bot_id, user.id)
-
-
-@bot_router.put('/{bot_id}/toggle-memory', summary="Toggle bot memory", response_model=BotOut)
-async def toggle_bot_memory(bot_id: UUID, user: User = Depends(get_current_user)):
-    return await BotService.toggle_bot_memory(bot_id, user.id)
-
-
-@bot_router.put('/{bot_id}/update-prompt', summary="update bot persona prompt", response_model=BotOut)
-async def update_pesona_prompt_bot(bot_id: UUID, prompt: str = Body(...), user: User = Depends(get_current_user)):
-    return await BotService.update_prompt_bot(bot_id, prompt, user.id)
-
-
 @bot_router.get('/change-avatar-random/{bot_id}', summary='Change avatar random bot', response_model=BotOut)
 async def change_avatar_random(bot_id: UUID, user: User = Depends(get_current_user)):
     return await BotService.change_avatar_random(bot_id, user.id)
