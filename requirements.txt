@@ -28,3 +28,4 @@ pymupdf
 tiktoken
 transformers
 torch
+docx2txt

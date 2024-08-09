@@ -7,7 +7,7 @@ import weaviate
 import weaviate.classes as wvc
 from fastapi import HTTPException
 from langchain.docstore.document import Document as LangchainDocument
-from langchain_community.document_loaders import PyMuPDFLoader, TextLoader, Docx2txtLoader
+from langchain_community.document_loaders import PyMuPDFLoader, TextLoader, Docx2txtLoader, DirectoryLoader
 from minio import Minio
 from weaviate.auth import Auth
 from weaviate.classes.config import Property, DataType
@@ -169,8 +169,10 @@ def load_file(minio_client: Minio, file_type: str, path: str, temp_dir: str) -> 
     loader_class = loaders.get(file_type)
     if not loader_class:
         raise ValueError(f"Invalid file type: {file_type}")
-
-    return loader_class(file_path).load()
+    if file_type == "txt":
+        return TextLoader(file_path, encoding='UTF-8').load()
+    else:
+        return loader_class(file_path).load()
 
 
 def clean_file_content(index: int, file: LangchainDocument, file_path: str, url: str) -> LangchainDocument:
@@ -214,7 +216,6 @@ def batch_import_knowledge_in_user(document_name: str, knowledge_name: str, file
 
     with get_weaviate_client() as weaviate_client:
         collection = weaviate_client.collections.get(document_name)
-
         data_rows = [
             {
                 "chunks": chunk.page_content,
