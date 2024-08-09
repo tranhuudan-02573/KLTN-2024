@@ -43,20 +43,6 @@ connection_config = ConnectionConfig(
 )
 
 
-# def get_weaviate_client():
-#     client = weaviate.connect_to_local(
-#         host=settings.WEAVIATE_HOST,
-#         headers={
-#             "X-HuggingFace-Api-Key": settings.HUGGINGFACE_API_KEY,
-#             "X-Cohere-Api-Key": settings.COHERE_API_KEY,
-#             "X-OpenAI-Api-Key": settings.OPENAI_API_KEY
-#         },
-#         skip_init_checks=True,
-#         additional_config=AdditionalConfig(
-#             timeout=Timeout(init=2, query=100000, insert=100000)
-#         )
-#     )
-#     return client
 def get_weaviate_client():
     global weaviate_client
     if weaviate_client is None:
@@ -133,7 +119,7 @@ def create_for_user(document):
             reranker_config=wvc.config.Configure.Reranker.transformers(
             ),
             vectorizer_config=wvc.config.Configure.Vectorizer.text2vec_huggingface(
-                model="dangvantuan/vietnamese-embedding",
+                model=settings.MODEL_EMBEDDING_NAME,
                 use_cache=True,
                 use_gpu=False,
                 wait_for_model=True,
@@ -414,7 +400,7 @@ def aggregate_for_user(document_name):
                 )
             ]
         )
-        print(response3)
+        return response3
 
 
 def read_object_by_id(docname, id):

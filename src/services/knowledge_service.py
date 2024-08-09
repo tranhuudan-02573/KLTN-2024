@@ -13,7 +13,7 @@ from src.db_vector.weaviate_rag_non_tenant import delete_one_knowledge_user, get
 from src.dtos.schema_in.knowledge import KnowledgeCreate, KnowledgeUpdate
 from src.dtos.schema_out.knowledge import KnowledgeOut, KnowledgeListFileOut, FileListChunkOut, FileOut
 from src.models.all_models import Knowledge, File, User
-from src.utils.app_util import get_key_name_minio
+from src.utils.app_util import get_key_name_minio, generate_key_knowledge
 
 settings = get_settings()
 
@@ -35,7 +35,6 @@ class KnowledgeService:
                 owner=owner_id
             )
             s = await knowledge_in.insert()
-            print(s)
             owner_id.knowledges.append(knowledge_in)
             await owner_id.save()
             return KnowledgeOut(
@@ -87,6 +86,7 @@ class KnowledgeService:
             raise HTTPException(status_code=404, detail="Knowledge not found")
         try:
             knowledge.description = data.description
+            knowledge.name = data.name
             rs = await knowledge.save()
             return KnowledgeOut(**rs.dict())
         except pymongo.errors.DuplicateKeyError:
@@ -101,7 +101,7 @@ class KnowledgeService:
         if not knowledge:
             raise HTTPException(status_code=404, detail="Knowledge not found")
         await knowledge.delete()
-        delete_one_knowledge_user(user.username, knowledge.name)
+        delete_one_knowledge_user(user.username, generate_key_knowledge(knowledge.knowledge_id))
         new = [k for k in user.knowledges if k.to_ref().id != knowledge.id]
         user.knowledges = new
         await user.save()
@@ -118,7 +118,7 @@ class KnowledgeService:
         knowledge.files = new
         await knowledge.save()
         await file.delete()
-        delete_one_file_knowledge(user.username, knowledge.name, get_key_name_minio(file.url))
+        delete_one_file_knowledge(user.username, generate_key_knowledge(knowledge.knowledge_id), get_key_name_minio(file.url))
 
     @staticmethod
     async def remove_files_from_knowledge(knowledge_id: UUID, file_ids: List[UUID], user: User):
@@ -131,7 +131,8 @@ class KnowledgeService:
             if not file:
                 return None
             await file.delete()
-            delete_one_file_knowledge(user.username, knowledge.name, get_key_name_minio(file.url))
+            delete_one_file_knowledge(user.username, generate_key_knowledge(knowledge.knowledge_id),
+                                      get_key_name_minio(file.url))
             return file.id
 
         removed_file_ids = await asyncio.gather(*[remove_file(file_id) for file_id in file_ids])
@@ -163,7 +164,7 @@ class KnowledgeService:
         file = await File.find_one(File.file_id == file_id, File.knowledge.id == knowledge.id)
         if not file:
             raise HTTPException(status_code=404, detail="File not found")
-        rs = get_all_chunk_in_file(user.username, knowledge.name, get_key_name_minio(file.url))
+        rs = get_all_chunk_in_file(user.username, generate_key_knowledge(knowledge.knowledge_id), get_key_name_minio(file.url))
         return FileListChunkOut(
             file=FileOut(
                 file_id=file.file_id,
@@ -183,5 +184,5 @@ class KnowledgeService:
     @staticmethod
     async def get_knowledges_by_ids(knowledge_ids: list[UUID]) -> list[str]:
         knowledges = await Knowledge.find(In(Knowledge.knowledge_id, knowledge_ids)).to_list()
-        knowledge_names = [k.name for k in knowledges]
+        knowledge_names = [generate_key_knowledge(k.knowledge_id) for k in knowledges]
         return knowledge_names

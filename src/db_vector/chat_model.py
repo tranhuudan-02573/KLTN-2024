@@ -1,9 +1,7 @@
 import asyncio
 import random
-import time
 
-import openai
-from openai import OpenAI, AsyncOpenAI
+from openai import AsyncOpenAI
 
 from src.config.app_config import get_settings
 from src.dtos.schema_in.query import ChunkPayload, ConversationItem

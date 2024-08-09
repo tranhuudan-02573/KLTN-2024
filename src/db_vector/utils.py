@@ -4,11 +4,13 @@ from transformers import AutoTokenizer
 
 from src.config.app_config import get_settings
 
+settings = get_settings()
+
 
 def generate_embeddings(text):
     embeddings = HuggingFaceInferenceAPIEmbeddings(
-        api_key=get_settings().HUGGINGFACE_API_KEY,
-        model_name="dangvantuan/vietnamese-embedding"
+        api_key=settings.HUGGINGFACE_API_KEY,
+        model_name=settings.MODEL_EMBEDDING_NAME
     )
     return embeddings.embed_query(text)
 
@@ -25,9 +27,8 @@ def get_recursive_token_chunk(chunk_size=256):
         " ",
         "",
     ]
-    EMBEDDING_MODEL_NAME = "dangvantuan/vietnamese-embedding"
     text_splitter = RecursiveCharacterTextSplitter.from_huggingface_tokenizer(
-        AutoTokenizer.from_pretrained(EMBEDDING_MODEL_NAME),
+        AutoTokenizer.from_pretrained(settings.MODEL_EMBEDDING_NAME),
         chunk_size=chunk_size,
         chunk_overlap=int(chunk_size / 10),
         add_start_index=True,
