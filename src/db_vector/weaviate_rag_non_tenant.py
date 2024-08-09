@@ -49,7 +49,6 @@ def get_weaviate_client():
         weaviate_client = weaviate.connect_to_weaviate_cloud(
             cluster_url=settings.WEAVIATE_CLUSTER_URL,
             auth_credentials=Auth.api_key(settings.WEAVIATE_API_KEY),
-            skip_init_checks=True,
             headers={
                 "X-HuggingFace-Api-Key": settings.HUGGINGFACE_API_KEY,
                 "X-Cohere-Api-Key": settings.COHERE_API_KEY,
