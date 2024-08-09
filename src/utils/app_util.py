@@ -135,5 +135,11 @@ def generate_username(email):
     return username
 
 
+def generate_key_knowledge(name):
+    domain_hash = hashlib.md5(str(name).encode()).hexdigest()[:5]
+    username = f"Knowledge_{domain_hash}"
+    return username
+
+
 def get_key_name_minio(value: str):
     return value.replace(f"{settings.SERVER_IP}:{settings.MINIO_PORT}/{settings.BUCKET_NAME}/", "")

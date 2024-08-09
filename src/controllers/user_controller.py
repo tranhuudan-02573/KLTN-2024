@@ -2,11 +2,11 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from fastapi.responses import JSONResponse
 
 from src.config.app_config import get_settings
+from src.db_vector.weaviate_rag_non_tenant import aggregate_for_user
 from src.dtos.schema_in.user import UserChangePass, UserUpdate
 from src.dtos.schema_out.user import UserBotOut, UserOut, UserKnowledgeOut
 from src.models.all_models import User
-from src.security import get_current_user, get_current_user_normal
-from src.services.auth_service import AuthService
+from src.security import get_current_user
 from src.services.user_service import UserService
 from src.utils.app_util import get_key_name_minio
 from src.utils.minio_util import delete_from_minio, upload_user_avatar_to_minio
@@ -19,6 +19,11 @@ user_router = APIRouter()
 @user_router.get('/me', summary='Get details of currently logged in user', response_model=UserOut)
 async def get_me(user: User = Depends(get_current_user)):
     return user
+
+
+@user_router.get('/aggregate', summary='Get aggregate of currently logged in user', response_model=UserOut)
+async def get_aggregate_me(user: User = Depends(get_current_user)):
+    return aggregate_for_user(user.username)
 
 
 @user_router.get("/bots", summary="Get all bots of user", response_model=UserBotOut)

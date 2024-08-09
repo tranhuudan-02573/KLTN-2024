@@ -23,7 +23,7 @@ class KnowledgeCreate(KnowledgeName):
     description: str = Field(..., max_length=1000)
 
 
-class KnowledgeUpdate(BaseModel):
+class KnowledgeUpdate(KnowledgeName):
     description: Optional[str] = Field(None, max_length=1000)
 
 

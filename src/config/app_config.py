@@ -51,6 +51,7 @@ class Settings(BaseSettings):
     WEAVIATE_CLUSTER_URL: str = os.getenv('WEAVIATE_CLUSTER_URL')
     MINIO_HOST: str = os.getenv('MINIO_HOST')
     REDIS_PASSWORD: str = os.getenv('REDIS_PASSWORD')
+    MODEL_EMBEDDING_NAME: str = os.getenv('MODEL_EMBEDDING_NAME')
 
     class Config:
         env_file = env_path

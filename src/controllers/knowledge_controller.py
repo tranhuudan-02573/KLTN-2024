@@ -12,6 +12,7 @@ from src.dtos.schema_out.knowledge import KnowledgeOut, KnowledgeListFileOut, Fi
 from src.models.all_models import User, Knowledge, File
 from src.security import get_current_user
 from src.services.knowledge_service import KnowledgeService
+from src.utils.app_util import generate_key_knowledge
 from src.utils.minio_util import upload_file_knowledge_to_minio
 import time
 
@@ -68,14 +69,16 @@ async def add_files_to_knowledge(knowledge_id: UUID, files: List[UploadFile] = f
         if file_type not in ALLOWED_FILE_TYPES:
             raise HTTPException(status_code=415, detail=f"Unsupported file type for {file_name}")
 
-        url, s3_file_path = upload_file_knowledge_to_minio("file_knowledge", user.username, knowledge.name, file_bytes,
+        url, s3_file_path = upload_file_knowledge_to_minio("file_knowledge", user.username,
+                                                           generate_key_knowledge(knowledge.knowledge_id), file_bytes,
                                                            file_name, file_type)
         if not (url and s3_file_path):
             raise HTTPException(status_code=500, detail=f"Failed to upload file {file_name} to MINIO")
 
         file_name2 = s3_file_path.split('/')[-1]
         start_time = time.time()
-        chunk_len = batch_import_knowledge_in_user(user.username, knowledge.name, file_type, s3_file_path, url)
+        chunk_len = batch_import_knowledge_in_user(user.username, generate_key_knowledge(knowledge.knowledge_id), file_type,
+                                                   s3_file_path, url)
         end_time = time.time()
         execution_time = end_time - start_time
 
