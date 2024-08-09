@@ -30,7 +30,7 @@ CUSTOM_PROPERTIES = [
     "after_clean", "source",
     "page_label"
 ]
-weaviate_client = None
+
 settings = get_settings()
 import tempfile
 
@@ -44,22 +44,20 @@ connection_config = ConnectionConfig(
 
 
 def get_weaviate_client():
-    global weaviate_client
-    if weaviate_client is None:
-        weaviate_client = weaviate.connect_to_weaviate_cloud(
-            cluster_url=settings.WEAVIATE_CLUSTER_URL,
-            auth_credentials=Auth.api_key(settings.WEAVIATE_API_KEY),
-            headers={
-                "X-HuggingFace-Api-Key": settings.HUGGINGFACE_API_KEY,
-                "X-Cohere-Api-Key": settings.COHERE_API_KEY,
-                "X-OpenAI-Api-Key": settings.OPENAI_API_KEY
-            },
-            additional_config=AdditionalConfig(
-                timeout=Timeout(init=2, query=120, insert=300),
-                connection=connection_config
-            ),
-        )
-        return weaviate_client
+    weaviate_client = weaviate.connect_to_weaviate_cloud(
+        cluster_url=settings.WEAVIATE_CLUSTER_URL,
+        auth_credentials=Auth.api_key(settings.WEAVIATE_API_KEY),
+        headers={
+            "X-HuggingFace-Api-Key": settings.HUGGINGFACE_API_KEY,
+            "X-Cohere-Api-Key": settings.COHERE_API_KEY,
+            "X-OpenAI-Api-Key": settings.OPENAI_API_KEY
+        },
+        additional_config=AdditionalConfig(
+            timeout=Timeout(init=2, query=120, insert=300),
+            connection=connection_config
+        ),
+    )
+    return weaviate_client
 
 
 def create_for_user(document):
