@@ -30,7 +30,6 @@ CUSTOM_PROPERTIES = [
     "after_clean", "source",
     "page_label"
 ]
-weaviate_client = None
 settings = get_settings()
 import tempfile
 
@@ -44,43 +43,47 @@ connection_config = ConnectionConfig(
 
 
 def get_weaviate_client():
-    global weaviate_client
-    if weaviate_client is None:
-        weaviate_client = weaviate.connect_to_weaviate_cloud(
-            cluster_url=settings.WEAVIATE_CLUSTER_URL,
-            auth_credentials=Auth.api_key(settings.WEAVIATE_API_KEY),
-            skip_init_checks=True,
-            headers={
-                "X-HuggingFace-Api-Key": settings.HUGGINGFACE_API_KEY,
-                "X-Cohere-Api-Key": settings.COHERE_API_KEY,
-                "X-OpenAI-Api-Key": settings.OPENAI_API_KEY
-            },
-            additional_config=AdditionalConfig(
-                timeout=Timeout(init=2, query=120, insert=300),
-                connection=connection_config
-            ),
-        )
-        return weaviate_client
+    weaviate_client = weaviate.connect_to_weaviate_cloud(
+        cluster_url=settings.WEAVIATE_CLUSTER_URL,
+        auth_credentials=Auth.api_key(settings.WEAVIATE_API_KEY),
+        headers={
+            "X-HuggingFace-Api-Key": settings.HUGGINGFACE_API_KEY,
+            "X-Cohere-Api-Key": settings.COHERE_API_KEY,
+            "X-OpenAI-Api-Key": settings.OPENAI_API_KEY
+        },
+        additional_config=AdditionalConfig(
+            timeout=Timeout(init=2, query=120, insert=300),
+            connection=connection_config
+        ),
+    )
+    return weaviate_client
 
 
 def create_for_user(document):
     with get_weaviate_client() as client:
         collection = client.collections.create(
             name=document,
-            vector_index_config=wvc.config.Configure.VectorIndex.hnsw(
-                distance_metric=wvc.config.VectorDistances.COSINE,
-                ef_construction=128,
-                cleanup_interval_seconds=300,
-                ef=-1,
-                max_connections=32,
-                dynamic_ef_min=5,
-                dynamic_ef_max=500,
-                dynamic_ef_factor=8,
-                vector_cache_max_objects=1000000,
-                flat_search_cutoff=40000,
-                quantizer=wvc.config.Configure.VectorIndex.Quantizer.bq(
-                    rescore_limit=200,
-                    cache=True,
+            vector_index_config=wvc.config.Configure.VectorIndex.dynamic(
+                distance_metric=weaviate.classes.config.VectorDistances.COSINE,
+                threshold=25000,
+                hnsw=wvc.config.Configure.VectorIndex.hnsw(
+                    ef_construction=128,
+                    cleanup_interval_seconds=300,
+                    ef=-1,
+                    max_connections=32,
+                    dynamic_ef_min=5,
+                    dynamic_ef_max=500,
+                    dynamic_ef_factor=8,
+                    vector_cache_max_objects=1000000,
+                    flat_search_cutoff=40000,
+                    quantizer=wvc.config.Configure.VectorIndex.Quantizer.bq(
+                        rescore_limit=200,
+                        cache=True,
+                    ),
+                ),
+                flat=wvc.config.Configure.VectorIndex.flat(
+                    quantizer=wvc.config.Configure.VectorIndex.Quantizer.bq(cache=True),
+                    vector_cache_max_objects=1000000,
                 ),
             ),
             inverted_index_config=wvc.config.Configure.inverted_index(
@@ -210,7 +213,6 @@ def batch_import_knowledge_in_user(document_name: str, knowledge_name: str, file
 
     with get_weaviate_client() as weaviate_client:
         collection = weaviate_client.collections.get(document_name)
-
         data_rows = [
             {
                 "chunks": chunk.page_content,

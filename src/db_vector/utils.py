@@ -6,13 +6,31 @@ from src.config.app_config import get_settings
 
 settings = get_settings()
 
+from itertools import cycle
 
-def generate_embeddings(text):
-    embeddings = HuggingFaceInferenceAPIEmbeddings(
-        api_key=settings.HUGGINGFACE_API_KEY,
-        model_name=settings.MODEL_EMBEDDING_NAME
-    )
-    return embeddings.embed_query(text)
+api_keys = ["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", "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",
+            "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", "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",
+            "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",
+            "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"]
+api_key_cycle = cycle(api_keys)
+import time
+
+
+def generate_embeddings(text, max_retries=3, retry_delay=2):
+    for _ in range(max_retries):
+        try:
+            current_api_key = next(api_key_cycle)  # Lấy API key tiếp theo
+            embeddings = HuggingFaceInferenceAPIEmbeddings(
+                api_key=current_api_key,
+                model_name=settings.MODEL_EMBEDDING_NAME
+            )
+            return embeddings.embed_query(text)
+        except Exception as e:
+            print(f"API key {current_api_key} failed. Trying the next one...")
+            time.sleep(retry_delay)  # Tạm dừng trước khi thử lại
+
+    # Nếu tất cả các API key đều thất bại
+    raise Exception("All API keys failed. Please check your keys or try again later.")
 
 
 def get_recursive_token_chunk(chunk_size=256):
