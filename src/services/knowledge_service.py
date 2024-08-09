@@ -6,7 +6,6 @@ import pymongo
 from beanie import PydanticObjectId
 from beanie.odm.operators.find.comparison import In
 from fastapi import HTTPException, Depends
-
 from src.config.app_config import get_settings
 from src.db_vector.weaviate_rag_non_tenant import delete_one_knowledge_user, get_all_chunk_in_file, \
     delete_one_file_knowledge

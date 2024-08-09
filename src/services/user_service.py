@@ -2,6 +2,7 @@ from typing import Optional, List, Tuple
 from uuid import UUID
 
 import pymongo
+from beanie.odm.operators.find.comparison import In
 from fastapi import HTTPException
 
 from src.config.app_config import get_settings
@@ -9,12 +10,10 @@ from src.dtos.schema_in.user import UserCreate, UserUpdate, UserChangePass
 from src.dtos.schema_out.bot import BotOut
 from src.dtos.schema_out.knowledge import KnowledgeOut
 from src.dtos.schema_out.user import UserOut, UserBotOut, UserKnowledgeOut
-from src.models.all_models import User
+from src.models.all_models import User, Knowledge
 from src.services.auth_service import get_password, verify_password
-from src.services.bot_service import BotService
 from src.services.jwt_service import refresh_tokens
 from src.utils.app_util import generate_random_password, get_random_avatar
-from src.utils.minio_util import delete_folder_from_minio
 
 settings = get_settings()
 
@@ -63,7 +62,6 @@ class UserService:
                 detail=" Bot with this name already exists. Please choose a different name."
             )
 
-
     @staticmethod
     async def get_bots(u: User) -> UserBotOut:
         await u.fetch_link(User.bots)
@@ -97,6 +95,8 @@ class UserService:
     @staticmethod
     async def get_knowledges(u: User) -> UserKnowledgeOut:
         await u.fetch_link(User.knowledges)
+        knowledge_ids = [k.to_ref().id for k in u.knowledges]
+        knowledges = await Knowledge.find(In(Knowledge.id == knowledge_ids)).to_list()
         return UserKnowledgeOut(
             user=UserOut(
                 user_id=u.user_id,
@@ -118,7 +118,7 @@ class UserService:
                 description=k.description,
                 created_at=k.created_at,
                 updated_at=k.updated_at
-            ) for k in u.knowledges]
+            ) for k in knowledges]
         )
 
     @staticmethod
