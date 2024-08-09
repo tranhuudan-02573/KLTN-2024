@@ -96,7 +96,7 @@ class UserService:
     async def get_knowledges(u: User) -> UserKnowledgeOut:
         await u.fetch_link(User.knowledges)
         knowledge_ids = [k.to_ref().id for k in u.knowledges]
-        knowledges = await Knowledge.find(In(Knowledge.id == knowledge_ids)).to_list()
+        knowledges = await Knowledge.find(In(Knowledge.id, knowledge_ids)).to_list()
         return UserKnowledgeOut(
             user=UserOut(
                 user_id=u.user_id,
