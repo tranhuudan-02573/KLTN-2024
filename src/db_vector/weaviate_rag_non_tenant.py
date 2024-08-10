@@ -414,9 +414,3 @@ def read_object_by_id(docname, id):
             return data_object.properties
 
 
-if __name__ == '__main__':
-    docname = "User_20130218_0a61a"
-    know = "Knowledge_c90fb"
-    source = "User_20130218_0a61a/file_knowledge/Knowledge_c90fb/2024-08-10/pdf/Khoá Học Fullstack - Nestech _0.pdf"
-    print(get_all_chunk_in_file2(docname, know, source))
-    # delete_one_knowledge_user(docname, know)
