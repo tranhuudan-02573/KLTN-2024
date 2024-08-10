@@ -64,10 +64,8 @@ def create_for_user(document):
     with get_weaviate_client() as client:
         collection = client.collections.create(
             name=document,
-            vector_index_config=wvc.config.Configure.VectorIndex.dynamic(
-                distance_metric=weaviate.classes.config.VectorDistances.COSINE,
-                threshold=25000,
-                hnsw=wvc.config.Configure.VectorIndex.hnsw(
+            vector_index_config=wvc.config.Configure.VectorIndex.hnsw(
+                    distance_metric=weaviate.classes.config.VectorDistances.COSINE,
                     ef_construction=128,
                     cleanup_interval_seconds=300,
                     ef=-1,
@@ -82,11 +80,6 @@ def create_for_user(document):
                         cache=True,
                     ),
                 ),
-                flat=wvc.config.Configure.VectorIndex.flat(
-                    quantizer=wvc.config.Configure.VectorIndex.Quantizer.bq(cache=True),
-                    vector_cache_max_objects=1000000,
-                ),
-            ),
             inverted_index_config=wvc.config.Configure.inverted_index(
                 index_timestamps=True,
                 index_null_state=True,
