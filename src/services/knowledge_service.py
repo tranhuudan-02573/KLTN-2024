@@ -167,6 +167,7 @@ class KnowledgeService:
             raise HTTPException(status_code=404, detail="File not found")
         rs = get_all_chunk_in_file(user.username, generate_key_knowledge(knowledge.knowledge_id),
                                    get_key_name_minio(file.url))
+        
         return FileListChunkOut(
             file=FileOut(
                 file_id=file.file_id,

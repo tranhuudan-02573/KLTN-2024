@@ -48,7 +48,7 @@ class Auth(BaseModel):
 
 class User(BaseDocument):
     user_id: UUID = Field(default_factory=uuid4, unique=True)
-    username: Indexed(str, unique=True)
+    username: Optional[str] = Field(max_length=50)
     email: Indexed(EmailStr, unique=True)
     hashed_password: Optional[str]
     avatar: Optional[str] = None
@@ -84,7 +84,7 @@ class User(BaseDocument):
 
 class Knowledge(BaseDocument):
     knowledge_id: UUID = Field(default_factory=uuid4, unique=True)
-    name: Indexed(str, unique=True)
+    name: Optional[str] = Field(max_length=100)
     description: Optional[str] = Field(max_length=1000)
     owner: Optional[Link['User']]
     files: Optional[List[Link['File']]] = Field(default_factory=list)
@@ -138,7 +138,7 @@ class File(BaseDocument):
 
 class Bot(BaseDocument):
     bot_id: UUID = Field(default_factory=uuid4, unique=True)
-    name: Indexed(str, unique=True)
+    name: Optional[str] = Field(max_length=100)
     avatar: Optional[str] = None
     description: Optional[str] = Field(max_length=500)
     is_active: Optional[bool] = Field(default=True)
@@ -169,7 +169,7 @@ class Bot(BaseDocument):
 
 class Chat(BaseDocument):
     chat_id: UUID = Field(default_factory=uuid4, unique=True)
-    title: Optional[str] = Field(max_length=200, unique=True)
+    title: Optional[str] = Field(max_length=100)
     bot: Optional[Link['Bot']]
     queries: Optional[List[Link['Query']]] = Field(default_factory=list)
 
