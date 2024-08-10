@@ -150,81 +150,67 @@ def clean_input(input_text: str) -> str:
     return unescape(text.strip())
 
 
-def load_file(file_type, path):
+def load_file(minio_client: Minio, file_type: str, path: str, temp_dir: str) -> List[LangchainDocument]:
+    file_path = os.path.join(temp_dir, os.path.basename(path))
+    minio_client.fget_object(settings.BUCKET_NAME, path, file_path)
+
+    loaders = {
+        "pdf": PyMuPDFLoader,
+        "txt": TextLoader,
+        "docx": Docx2txtLoader
+    }
+
+    loader_class = loaders.get(file_type)
+    if not loader_class:
+        raise ValueError(f"Invalid file type: {file_type}")
+    if file_type == "txt":
+        return TextLoader(file_path, encoding='UTF-8').load()
+    else:
+        return loader_class(file_path).load()
+
+
+def clean_file_content(pages: int, index: int, page: LangchainDocument, file_path: str, url: str) -> LangchainDocument:
+    content = page.page_content
+    clean_text = clean_input(content)
+    properties = {
+        'source': file_path,
+        'url': url,
+        'page_label': f"{index + 1}/{pages}",
+        'after_clean': f"{len(clean_text)}/{len(content)}",
+    }
+    return LangchainDocument(page_content=clean_text, metadata=properties)
+
+
+def load_and_clean_file(file_type: str, file_path: str, url: str):
     minio_client = Minio(
-        f"{settings.SERVER_IP}:{settings.MINIO_PORT}",
+        f"{settings.MINIO_HOST}:{settings.MINIO_PORT}",
         access_key=settings.MINIO_ACCESS_KEY,
         secret_key=settings.MINIO_SECRET_ACCESS_KEY,
         secure=False,
         region=settings.REGION_NAME,
     )
     with tempfile.TemporaryDirectory() as temp_dir:
-        file_path = os.path.join(temp_dir, os.path.basename(path))
-        try:
-            minio_client.fget_object(settings.BUCKET_NAME, path, file_path)
-            if file_type == "pdf":
-                loader = PyMuPDFLoader(file_path)
-            elif file_type == "txt":
-                loader = TextLoader(file_path, encoding="utf-8")
-            elif file_type == "docx":
-                loader = Docx2txtLoader(file_path)
-            else:
-                raise ValueError("Invalid file type")
-            return loader.load()
-        except Exception as e:
-            raise ValueError(f"Error downloading or loading file: {str(e)}")
+        pages = load_file(minio_client, file_type, file_path, temp_dir)
+        with ThreadPoolExecutor() as executor:
+            futures = [
+                executor.submit(clean_file_content, len(pages), index, page, file_path, url)
+                for index, page in enumerate(pages)
+            ]
+            results = [future.result() for future in as_completed(futures)]
+
+    return get_recursive_token_chunk(chunk_size=250).split_documents(results), len(pages)
 
 
-def load_and_clean_file(file_type, file_path, url):
-    minio_client = Minio(
-        f"{settings.SERVER_IP}:{settings.MINIO_PORT}",
-        access_key=settings.MINIO_ACCESS_KEY,
-        secret_key=settings.MINIO_SECRET_ACCESS_KEY,
-        secure=False,
-        region=settings.REGION_NAME,
-    )
-    with tempfile.TemporaryDirectory() as temp_dir:
-        file_path2 = os.path.join(temp_dir, os.path.basename(file_path))
-        try:
-            minio_client.fget_object(settings.BUCKET_NAME, file_path, file_path2)
-            if file_type == "pdf":
-                loader = PyMuPDFLoader(file_path2)
-            elif file_type == "txt":
-                loader = TextLoader(file_path2, encoding="utf-8")
-            elif file_type == "docx":
-                loader = Docx2txtLoader(file_path2)
-            else:
-                raise ValueError("Invalid file type")
-            files = loader.load()
-            rs = []
-            for index, file in enumerate(files):
-                content = file.page_content
-                clean_text = clean_input(content)
-                properties = {
-                    'source': file_path,
-                    'url': url,
-                    'page_label': str(index) + "/" + str(len(files)),
-                    'after_clean': str(len(clean_text)) + "/" + str(len(content)),
-                }
-                document = LangchainDocument(page_content=clean_text, metadata=properties)
-                rs.append(document)
-        except Exception as e:
-            raise ValueError(f"Error downloading or loading file: {str(e)}")
-    documents = get_recursive_token_chunk(chunk_size=250).split_documents(rs)
-    return documents, rs
-
-
-def batch_import_knowledge_in_user(document_name, knowledge_name, file_type, file_path, url):
+def batch_import_knowledge_in_user(document_name: str, knowledge_name: str, file_type: str, file_path: str,
+                                   url: str):
     chunks, pages = load_and_clean_file(file_type, file_path, url)
     file_name = os.path.basename(file_path)
-    file_type2 = os.path.splitext(file_name)[-1].lstrip('.').lower()
-    print(f"Importing {len(chunks)} chunks from {len(pages)} pages")
+    file_type2 = file_name.split(".")[-1]
+
     with get_weaviate_client() as weaviate_client:
-        if not weaviate_client.collections.exists(document_name):
-            create_for_user(document_name)
         collection = weaviate_client.collections.get(document_name)
-        for index, chunk in enumerate(chunks):
-            data_row = {
+        data_rows = [
+            {
                 "chunks": chunk.page_content,
                 "source": chunk.metadata.get('source'),
                 "url": chunk.metadata.get('url'),
@@ -234,15 +220,21 @@ def batch_import_knowledge_in_user(document_name, knowledge_name, file_type, fil
                 "after_clean": chunk.metadata.get('after_clean'),
                 "knowledge_name": knowledge_name,
                 "file_name": file_name
-            }
-            obj_uuid = generate_uuid5(data_row)
-            with collection.batch.dynamic() as batch:
-                batch.add_object(
-                    properties=data_row,
-                    uuid=obj_uuid,
-                    vector=generate_embeddings(data_row["chunks"])
-                )
-    return len(chunks), len(pages)
+            } for index, chunk in enumerate(chunks)
+        ]
+
+        def add_object_to_batch(batch_run: Callable, data_row: dict) -> None:
+            batch_run.add_object(
+                properties=data_row,
+                uuid=generate_uuid5(data_row),
+                vector=generate_embeddings(data_row["chunks"])
+            )
+
+        with collection.batch.dynamic() as batch_run:
+            with ThreadPoolExecutor() as executor:
+                list(executor.map(lambda row: add_object_to_batch(batch_run, row), data_rows))
+
+    return len(chunks), pages
 
 
 def search_in_knowledge_user(document_name: str, query: str, knowledge_name: List[str]) -> List[ChunkSchema]:
@@ -412,5 +404,4 @@ def read_object_by_id(docname, id):
             )
             # print(data_object)
             return data_object.properties
-
-
+ 

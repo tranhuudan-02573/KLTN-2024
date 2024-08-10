@@ -52,7 +52,8 @@ class Settings(BaseSettings):
     MINIO_HOST: str = os.getenv('MINIO_HOST')
     REDIS_PASSWORD: str = os.getenv('REDIS_PASSWORD')
     MODEL_EMBEDDING_NAME: str = os.getenv('MODEL_EMBEDDING_NAME')
-
+    GROQ_API_KEY: str = os.getenv('GROQ_API_KEY')
+    MODEL_GENERATE_NAME: str = os.getenv('MODEL_GENERATE_NAME')
     class Config:
         env_file = env_path
         env_file_encoding = 'utf-8'
