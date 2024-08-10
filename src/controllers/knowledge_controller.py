@@ -77,8 +77,9 @@ async def add_files_to_knowledge(knowledge_id: UUID, files: List[UploadFile] = f
 
         file_name2 = s3_file_path.split('/')[-1]
         start_time = time.time()
-        chunk_len = batch_import_knowledge_in_user(user.username, generate_key_knowledge(knowledge.knowledge_id), file_type,
-                                                   s3_file_path, url)
+        chunk_len, pages = batch_import_knowledge_in_user(user.username, generate_key_knowledge(knowledge.knowledge_id),
+                                                          file_type,
+                                                          s3_file_path, url)
         end_time = time.time()
         execution_time = end_time - start_time
 
@@ -88,6 +89,7 @@ async def add_files_to_knowledge(knowledge_id: UUID, files: List[UploadFile] = f
             size=file_size,
             url=url,
             chunk_count=chunk_len,
+            page_count=pages,
             time_import=execution_time,
             knowledge=knowledge
         )

@@ -123,6 +123,7 @@ class File(BaseDocument):
     url: Optional[str]
     is_active: Optional[bool] = Field(default=True)
     chunk_count: Optional[int] = Field(ge=0)
+    page_count: Optional[int] = Field(ge=0)
     time_import: Optional[float] = Field(ge=0)
     knowledge: Optional[Link['Knowledge']]
 
