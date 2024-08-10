@@ -11,7 +11,7 @@ settings = get_settings()
 from functools import wraps
 
 client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
-client2 = AsyncGroq(api_key=settings.GROG_API_KEY)
+client2 = AsyncGroq(api_key=settings.GROQ_API_KEY)
 
 import groq
 

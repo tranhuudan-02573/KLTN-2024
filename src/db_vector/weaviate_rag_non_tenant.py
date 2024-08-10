@@ -295,6 +295,7 @@ def get_all_chunk_in_file(doc_name, knowledge, source) -> list[ChunkOut]:
         ):
             if item.properties.get("source") == source and item.properties.get("knowledge_name") == knowledge:
                 rs2.append(ChunkOut(**item.properties))
+    rs2.sort(key=lambda chunk: chunk.chunk_id)
     return rs2
 
 
