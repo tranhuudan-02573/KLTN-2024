@@ -174,19 +174,19 @@ def load_file(minio_client: Minio, file_type: str, path: str, temp_dir: str) -> 
         return loader_class(file_path).load()
 
 
-def clean_file_content(index: int, file: LangchainDocument, file_path: str, url: str) -> LangchainDocument:
-    content = file.page_content
+def clean_file_content(index: int, pages: int, page: LangchainDocument, file_path: str, url: str) -> LangchainDocument:
+    content = page.page_content
     clean_text = clean_input(content)
     properties = {
         'source': file_path,
         'url': url,
-        'page_label': f"{index + 1}/{len(file.page_content)}",
+        'page_label': f"{index + 1}/{pages}",
         'after_clean': f"{len(clean_text)}/{len(content)}",
     }
     return LangchainDocument(page_content=clean_text, metadata=properties)
 
 
-def load_and_clean_file(file_type: str, file_path: str, url: str) -> List[LangchainDocument]:
+def load_and_clean_file(file_type: str, file_path: str, url: str):
     minio_client = Minio(
         f"{settings.MINIO_HOST}:{settings.MINIO_PORT}",
         access_key=settings.MINIO_ACCESS_KEY,
@@ -194,22 +194,21 @@ def load_and_clean_file(file_type: str, file_path: str, url: str) -> List[Langch
         secure=False,
         region=settings.REGION_NAME,
     )
-
     with tempfile.TemporaryDirectory() as temp_dir:
-        files = load_file(minio_client, file_type, file_path, temp_dir)
+        pages = load_file(minio_client, file_type, file_path, temp_dir)
         with ThreadPoolExecutor() as executor:
             futures = [
-                executor.submit(clean_file_content, index, file, file_path, url)
-                for index, file in enumerate(files)
+                executor.submit(clean_file_content, len(pages), index, page, file_path, url)
+                for index, page in enumerate(pages)
             ]
             results = [future.result() for future in as_completed(futures)]
 
-    return get_recursive_token_chunk(chunk_size=250).split_documents(results)
+    return get_recursive_token_chunk(chunk_size=250).split_documents(results), len(pages)
 
 
 def batch_import_knowledge_in_user(document_name: str, knowledge_name: str, file_type: str, file_path: str,
-                                   url: str) -> int:
-    chunks = load_and_clean_file(file_type, file_path, url)
+                                   url: str):
+    chunks, pages = load_and_clean_file(file_type, file_path, url)
     file_name = os.path.basename(file_path)
     file_type2 = file_name.split(".")[-1]
 
@@ -240,7 +239,7 @@ def batch_import_knowledge_in_user(document_name: str, knowledge_name: str, file
             with ThreadPoolExecutor() as executor:
                 list(executor.map(lambda row: add_object_to_batch(batch_run, row), data_rows))
 
-    return len(chunks)
+    return len(chunks), pages
 
 
 def search_in_knowledge_user(document_name: str, query: str, knowledge_name: List[str]) -> List[ChunkSchema]:
