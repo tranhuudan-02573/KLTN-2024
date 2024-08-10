@@ -191,14 +191,15 @@ def load_and_clean_file(file_type: str, file_path: str, url: str):
     )
     with tempfile.TemporaryDirectory() as temp_dir:
         pages = load_file(minio_client, file_type, file_path, temp_dir)
+        pages_sorted = sorted(pages, key=lambda page: page.metadata.get('chunk_id'))
         with ThreadPoolExecutor() as executor:
             futures = [
-                executor.submit(clean_file_content, len(pages), index, page, file_path, url)
-                for index, page in enumerate(pages)
+                executor.submit(clean_file_content, len(pages_sorted), index, page, file_path, url)
+                for index, page in enumerate(pages_sorted)
             ]
             results = [future.result() for future in as_completed(futures)]
 
-    return get_recursive_token_chunk(chunk_size=250).split_documents(results), len(pages)
+    return get_recursive_token_chunk(chunk_size=250).split_documents(results), len(pages_sorted)
 
 
 def batch_import_knowledge_in_user(document_name: str, knowledge_name: str, file_type: str, file_path: str,
@@ -405,4 +406,3 @@ def read_object_by_id(docname, id):
             )
             # print(data_object)
             return data_object.properties
- 
