@@ -1,26 +1,26 @@
 ﻿version: '3.8'
 
 services:
-#  fastapi-service:
-  #    build:
-  #      context: .
-  #      dockerfile: Dockerfile
-  #    image: kltn
-  #    container_name: fastapi
-  #    restart: unless-stopped
-  #    depends_on:
-  #      minio:
-  #        condition: service_healthy
-  #      redis:
-  #        condition: service_healthy
-  #    ports:
-  #      - "8068:8068"
-  #    env_file:
-  #      - .env
-  #    networks:
-  #      - huudan
-  #    volumes:
-  #      - ".:/usr/srv"
+ fastapi-service:
+     build:
+       context: .
+       dockerfile: Dockerfile
+     image: kltn
+     container_name: fastapi
+     restart: unless-stopped
+     depends_on:
+       minio:
+         condition: service_healthy
+       redis:
+         condition: service_healthy
+     ports:
+       - "8068:8068"
+     env_file:
+       - .env
+     networks:
+       - huudan
+     volumes:
+       - ".:/usr/srv"
   minio:
     container_name: minio
     restart: on-failure
