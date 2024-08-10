@@ -14,10 +14,6 @@ from src.utils.app_util import valid_file_or_folder_name
 class KnowledgeName(BaseModel):
     name: str = Field(..., max_length=255)
 
-    @field_validator('name')
-    def validate_name(cls, value):
-        return valid_file_or_folder_name(value)
-
 
 class KnowledgeCreate(KnowledgeName):
     description: str = Field(..., max_length=1000)

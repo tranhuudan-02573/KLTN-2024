@@ -21,6 +21,7 @@ class FileOut(BaseOutModel):
     is_active: Optional[bool]
     chunk_count: Optional[int]
     time_import: Optional[float]
+    page_count: Optional[int]
 
 
 class ChunkOut(BaseModel):

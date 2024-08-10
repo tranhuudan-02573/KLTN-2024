@@ -101,6 +101,7 @@ async def add_files_to_knowledge(knowledge_id: UUID, files: List[UploadFile] = f
             name=file_i.name,
             file_type=file_i.file_type,
             size=file_i.size,
+            page_count=file_i.page_count,
             url=file_i.url,
             is_active=file_i.is_active,
             chunk_count=file_i.chunk_count,

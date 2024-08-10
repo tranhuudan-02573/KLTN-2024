@@ -69,6 +69,7 @@ class KnowledgeService:
                 name=f.name,
                 file_type=f.file_type,
                 size=f.size,
+                page_count=f.page_count,
                 url=f.url,
                 is_active=f.is_active,
                 chunk_count=f.chunk_count,
@@ -117,7 +118,8 @@ class KnowledgeService:
         knowledge.files = new
         await knowledge.save()
         await file.delete()
-        delete_one_file_knowledge(user.username, generate_key_knowledge(knowledge.knowledge_id), get_key_name_minio(file.url))
+        delete_one_file_knowledge(user.username, generate_key_knowledge(knowledge.knowledge_id),
+                                  get_key_name_minio(file.url))
 
     @staticmethod
     async def remove_files_from_knowledge(knowledge_id: UUID, file_ids: List[UUID], user: User):
@@ -163,13 +165,15 @@ class KnowledgeService:
         file = await File.find_one(File.file_id == file_id, File.knowledge.id == knowledge.id)
         if not file:
             raise HTTPException(status_code=404, detail="File not found")
-        rs = get_all_chunk_in_file(user.username, generate_key_knowledge(knowledge.knowledge_id), get_key_name_minio(file.url))
+        rs = get_all_chunk_in_file(user.username, generate_key_knowledge(knowledge.knowledge_id),
+                                   get_key_name_minio(file.url))
         return FileListChunkOut(
             file=FileOut(
                 file_id=file.file_id,
                 name=file.name,
                 file_type=file.file_type,
                 size=file.size,
+                page_count=file.page_count,
                 url=file.url,
                 is_active=file.is_active,
                 chunk_count=file.chunk_count,
