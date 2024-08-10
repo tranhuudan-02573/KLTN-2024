@@ -129,6 +129,7 @@ class UserService:
         user.gender = data.gender
         user.birth_date = data.birth_date
         user_i = await user.save()
+        print(user_i)
         return UserOut(**user_i.dict())
 
     @staticmethod
