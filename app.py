@@ -100,7 +100,7 @@ async def websocket_generate_stream2(chat_id: uuid.UUID, user_id: uuid.UUID, web
 # Configure CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*", "http://localhost:3000", "http://localhost", "http://localhost:8068", ],
+    allow_origins=["*", "http://localhost:3500"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
