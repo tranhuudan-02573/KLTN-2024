@@ -1,17 +1,15 @@
 import time
-from uuid import UUID
+import uuid
 
 from beanie import init_beanie
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, HTTPException
 from fastapi import FastAPI, Request, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from fastapi.responses import PlainTextResponse
 from motor.motor_asyncio import AsyncIOMotorClient
 from starlette.exceptions import HTTPException as StarletteHTTPException
-from starlette.responses import HTMLResponse
 from starlette.websockets import WebSocket, WebSocketDisconnect
 
 from src.config.app_config import get_settings
@@ -24,9 +22,6 @@ from src.db_vector.chat_model import generate_stream
 from src.dtos.schema_in.query import GeneratePayload
 from src.models.all_models import Bot, Query, Knowledge, Chat, File
 from src.models.all_models import User
-from src.security import get_current_user
-from src.services.chat_service import ChatService
-from src.services.query_service import QueryService
 from src.utils.minio_util import create_bucket_if_not_exist
 
 # Initialize FastAPI application and settings
@@ -48,7 +43,7 @@ async def websocket_generate_stream2(websocket: WebSocket):
             print(f"Received data: {data}")
             payload1 = json.loads(data)
             query_id = payload1['query_id']
-            query = await Query.find_one(Query.query_id == query_id)
+            query = await Query.find_one(Query.query_id == uuid.UUID(query_id))
             if not query:
                 raise HTTPException(status_code=404, detail="Query not found")
             payload = GeneratePayload(
