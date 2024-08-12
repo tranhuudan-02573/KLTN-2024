@@ -10,37 +10,8 @@ from src.dtos.schema_in.query import ChunkPayload, ConversationItem
 settings = get_settings()
 from functools import wraps
 
-client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
-client2 = AsyncGroq(api_key=settings.GROQ_API_KEY)
-
-import groq
-
-
-def groq_chat_completion_stream(user_str: str, system_str: str = "You are a helpful assistant.") -> str:
-    try:
-        with client2.with_options(max_retries=5).chat.completions.with_streaming_response.create(
-                messages=[
-                    {
-                        "role": "system",
-                        "content": system_str
-                    },
-                    {
-                        "role": "user",
-                        "content": user_str
-                    },
-                ],
-                model="llama3-8b-8192",
-        ) as response:
-            content = []
-            for line in response.iter_lines():
-                content.append(line)
-            return "".join(content)
-    except groq.APIConnectionError as e:
-        return f"The server could not be reached: {e.__cause__}"
-    except groq.RateLimitError as e:
-        return "A 429 status code was received; we should back off a bit."
-    except groq.APIStatusError as e:
-        return f"Another non-200-range status code was received: {e.status_code}\n{e.response}"
+client2 = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
+client = AsyncGroq(api_key=settings.GROQ_API_KEY)
 
 
 def prepare_messages(queries: str, context: list[ChunkPayload], conversation: list[ConversationItem]):
@@ -112,7 +83,7 @@ async def generate_stream(queries: str, context: list, conversation: list):
             model=settings.MODEL_GENERATE_NAME,
             messages=messages,
             stream=True,
-            stream_options={"include_usage": True},
+            # stream_options={"include_usage": True},
         )
         async for chunk in stream:
             yield chunk
