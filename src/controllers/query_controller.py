@@ -31,12 +31,6 @@ async def delete_for_chat(bot_id: UUID, chat_id: UUID, query_id: UUID,
     await QueryService.delete_for_chat(bot_id, user, chat_id, query_id)
 
 
-@query_router.get("/bots/{bot_id}/chats/{chat_id}/query/{query_id}/reset")
-async def get_query_for_chat(bot_id: UUID, chat_id: UUID, query_id: UUID,
-                             user: User = Depends(get_current_user)):
-    pass
-
-
 @query_router.get("/bots/{bot_id}/chats/{chat_id}/query/{query_id}/reset", status_code=200,
                   response_model=QueryChatOut)
 async def get_chunk_for_query(bot_id: UUID, chat_id: UUID, query_id: UUID,

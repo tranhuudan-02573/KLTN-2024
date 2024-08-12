@@ -5,6 +5,7 @@ from fastapi import HTTPException
 from src.db_vector.weaviate_rag_non_tenant import search_in_knowledge_user
 from src.dtos.schema_in.query import QueryCreate, GeneratePayload, ChunkPayload, QueryUpdate
 from src.dtos.schema_out.chat import QueryChatOut, ChatOut
+from src.dtos.schema_out.query import QuestionOut, AnswerOut
 from src.models.all_models import Query, Question, User, ChunkSchema, Chat, Knowledge, Bot
 from src.services.bot_service import BotService
 from src.services.chat_service import ChatService
@@ -100,14 +101,25 @@ class QueryService:
 
     @staticmethod
     async def get_chunk_for_query(bot_id: UUID, user: User, chat_id: UUID, query_id: UUID) -> QueryChatOut:
-        chat = ChatService.get_chat_for_bot(bot_id, user.id, chat_id)
+        chat = await ChatService.get_chat_for_bot(bot_id, user.id, chat_id)
         q = await Query.find_one(Query.chat.id == chat.id, Query.query_id == query_id, fetch_links=True)
         if not q:
             raise HTTPException(status_code=404, detail="Query not found")
         return QueryChatOut(
             query_id=q.query_id,
-            question=q.question.content,
-            answer=q.answer.content,
+            question=QuestionOut(
+                content=q.question.content,
+                role=q.question.role,
+                chunks=[ChunkSchema(**c.dict()) for c in q.question.chunks],
+                context=q.question.context,
+            ),
+            answer=AnswerOut(
+                content=q.answer.content,
+                role=q.answer.role,
+                prompt_token=q.answer.prompt_token,
+                completion_token=q.answer.completion_token,
+                total_time=q.answer.total_time
+            ),
             version=q.version,
             created_at=q.created_at,
             updated_at=q.updated_at,
