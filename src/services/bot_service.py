@@ -75,8 +75,16 @@ class BotService:
     async def delete_bot(bot_id: UUID, user_id: User):
         bot = await BotService.find_bot(bot_id, user_id.id)
         await bot.delete()
-        new = [b for b in user_id.bots if b.to_ref().id != bot.id]
-        user_id.bots = new
+        item_removed = False
+        new_bots = []
+        for b in user_id.bots:
+            if b.to_ref().id == bot.id:
+                item_removed = True
+                continue
+            new_bots.append(b)
+        if not item_removed:
+            raise HTTPException(status_code=404, detail="Bot not found")
+        user_id.bots = new_bots
         await user_id.save()
 
     @staticmethod
@@ -148,12 +156,11 @@ class BotService:
         if not knowledge:
             raise HTTPException(status_code=404, detail=KNOWLEDGE_NOT_FOUND)
         item_removed = False
-        # Create a new list excluding the knowledge with the matching id
         new_knowledges = []
         for k in bot.knowledges:
             if k.to_ref().id == knowledge.id:
                 item_removed = True
-                continue  # Skip adding this item to the new list
+                continue
             new_knowledges.append(k)
         if not item_removed:
             raise HTTPException(status_code=404, detail="Knowledge not found in bot")
