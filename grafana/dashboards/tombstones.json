@@ -603,7 +603,7 @@
   ],
   "refresh": "",
   "schemaVersion": 39,
-  "tags": [],
+  "tags": ["Weaviate"],
   "templating": {
     "list": []
   },

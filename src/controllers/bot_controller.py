@@ -112,6 +112,8 @@ async def get_all_knowledge_in_bots(bot_id: UUID, user: User = Depends(get_curre
     return await BotService.get_all_knowledge_in_bots(bot_id, user.id)
 
 
-@knowledge_bot_router.delete('/{bot_id}/knowledges/{knowledge_id}', summary="Remove knowledge from bot")
+@knowledge_bot_router.delete('/{bot_id}/knowledges/{knowledge_id}', summary="Remove knowledge from bot",
+                             status_code=204)
 async def remove_knowledge_from_bot(bot_id: UUID, knowledge_id: UUID, user: User = Depends(get_current_user)):
-    return await BotService.remove_knowledge_from_bot(bot_id, knowledge_id, user.id)
+    await BotService.remove_knowledge_from_bot(bot_id, knowledge_id, user.id)
+    return {"message": "Knowledge removed from bot successfully"}

@@ -27,28 +27,24 @@ async def valid_knowledge(id: UUID, user_id: PydanticObjectId) -> Knowledge:
 class KnowledgeService:
     @staticmethod
     async def create_knowledge(owner_id: User, knowledge: KnowledgeCreate) -> KnowledgeOut:
-        try:
-            knowledge_in = Knowledge(
-                name=knowledge.name,
-                description=knowledge.description,
-                owner=owner_id
-            )
-            s = await knowledge_in.insert()
-            owner_id.knowledges.append(knowledge_in)
-            await owner_id.save()
-            return KnowledgeOut(
-                knowledge_id=s.knowledge_id,
-                name=knowledge_in.name,
-                description=knowledge_in.description,
-                created_at=knowledge_in.created_at,
-                updated_at=knowledge_in.updated_at,
-            )
-        except pymongo.errors.DuplicateKeyError:
-            raise HTTPException(
-                status_code=400,
-                detail=" Bot with this name already exists. Please choose a different name."
-
-            )
+        knowledge_e = await Knowledge.find_one(Knowledge.name == knowledge.name, Knowledge.owner.id == owner_id.id)
+        if knowledge_e:
+            raise HTTPException(status_code=400, detail="Knowledge name already exists")
+        knowledge_in = Knowledge(
+            name=knowledge.name,
+            description=knowledge.description,
+            owner=owner_id
+        )
+        s = await knowledge_in.insert()
+        owner_id.knowledges.append(knowledge_in)
+        await owner_id.save()
+        return KnowledgeOut(
+            knowledge_id=s.knowledge_id,
+            name=knowledge_in.name,
+            description=knowledge_in.description,
+            created_at=knowledge_in.created_at,
+            updated_at=knowledge_in.updated_at,
+        )
 
     @staticmethod
     async def get_knowledge_by_id(id: UUID, user_id: PydanticObjectId) -> KnowledgeListFileOut:
@@ -84,16 +80,12 @@ class KnowledgeService:
         knowledge = await Knowledge.find_one(Knowledge.knowledge_id == id, Knowledge.owner.id == user_id)
         if not knowledge:
             raise HTTPException(status_code=404, detail="Knowledge not found")
-        try:
-            knowledge.description = data.description
-            knowledge.name = data.name
-            rs = await knowledge.save()
-            return KnowledgeOut(**rs.dict())
-        except pymongo.errors.DuplicateKeyError:
-            raise HTTPException(
-                status_code=400,
-                detail=" Bot with this name already exists. Please choose a different name."
-            )
+        if knowledge.name == data.name:
+            raise HTTPException(status_code=400, detail="Knowledge name already exists")
+        knowledge.description = data.description if data.description else knowledge.description
+        knowledge.name = data.name if data.name else knowledge.name
+        rs = await knowledge.save()
+        return KnowledgeOut(**rs.dict())
 
     @staticmethod
     async def delete_knowledge(id: UUID, user: User):
@@ -167,7 +159,7 @@ class KnowledgeService:
             raise HTTPException(status_code=404, detail="File not found")
         rs = get_all_chunk_in_file(user.username, generate_key_knowledge(knowledge.knowledge_id),
                                    get_key_name_minio(file.url))
-        
+
         return FileListChunkOut(
             file=FileOut(
                 file_id=file.file_id,

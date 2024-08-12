@@ -14,7 +14,7 @@
         "target": {
           "limit": 100,
           "matchAny": false,
-          "tags": [],
+          "tags": ["Weaviate"],
           "type": "dashboard"
         },
         "type": "dashboard"
@@ -536,7 +536,7 @@
   "refresh": false,
   "schemaVersion": 34,
   "style": "dark",
-  "tags": [],
+  "tags": ["Weaviate"],
   "templating": {
     "list": []
   },

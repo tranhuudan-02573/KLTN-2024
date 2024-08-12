@@ -1,30 +1,30 @@
 ﻿version: '3.8'
 
 services:
-  fastapi-service:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: kltn
-    container_name: fastapi
-    restart: unless-stopped
-    depends_on:
-      minio:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      mongodb:
-        condition: service_healthy
-      weaviate:
-        condition: service_healthy
-    ports:
-      - "8068:8068"
-    env_file:
-      - .env
-    networks:
-      - huudan
-    volumes:
-      - ".:/usr/srv"
+#  fastapi-service:
+#    build:
+#      context: .
+#      dockerfile: Dockerfile
+#    image: kltn
+#    container_name: fastapi
+#    restart: unless-stopped
+#    depends_on:
+#      minio:
+#        condition: service_healthy
+#      redis:
+#        condition: service_healthy
+#      mongodb:
+#        condition: service_healthy
+#      weaviate:
+#        condition: service_healthy
+#    ports:
+#      - "8068:8068"
+#    env_file:
+#      - .env
+#    networks:
+#      - huudan
+#    volumes:
+#      - ".:/usr/srv"
   minio:
     container_name: minio
     restart: on-failure
@@ -41,6 +41,13 @@ services:
     environment:
       MINIO_ROOT_USER: ${MINIO_ACCESS_KEY}
       MINIO_ROOT_PASSWORD: ${MINIO_SECRET_ACCESS_KEY}
+      MINIO_CACHE_QUOTA: 80 # 80% of the drive will be used for caching
+      MINIO_CACHE_AFTER: 1 # Object will be cached after the first request to it
+      MINIO_CACHE_WATERMARK_LOW: 70 # Least accessed objects will be erased after the cache disk reaches the 70% watermark
+      MINIO_CACHE_WATERMARK_HIGH: 90
+      MINIO_PROMETHEUS_AUTH_TYPE: public
+      MINIO_CACHE=: "on"
+      MINIO_CACHE_DRIVES: /mnt/drive1,/mnt/drive2
     command: server /data --console-address ":9001"
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:9000/minio/health/live" ]
@@ -62,7 +69,18 @@ services:
       /usr/bin/mc policy download kltn2024/file-storage;
       exit 0;
       "
-  
+  redis-exporter:
+    image: oliver006/redis_exporter
+    ports:
+      - 9121:9121
+    environment:
+      REDIS_ADDR: "redis:6379"
+      REDIS_USER: null
+      REDIS_PASSWORD: $REDIS_PASSWORD
+    networks:
+        - huudan
+    depends_on:
+      - redis
   redis:
     image: redis:latest
     container_name: redis
@@ -112,6 +130,7 @@ services:
     environment:
       LOG_LEVEL: debug
       LIMIT_RESOURCES: 'true'
+      PROMETHEUS_MONITORING_PORT: 2112
       PROMETHEUS_MONITORING_ENABLED: 'true'
       QUERY_DEFAULTS_LIMIT: 25
       AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: 'true'
@@ -147,19 +166,23 @@ services:
     ports:
       - "9090:9090"
     depends_on:
-      weaviate:
-        condition: service_healthy
+      - weaviate
+      - redis-exporter
     networks:
       - huudan
   grafana:
     image: grafana/grafana-oss
     ports:
       - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_SECURITY_ADMIN_USER=admin
     volumes:
       - ./grafana/grafana.ini:/etc/grafana/grafana.ini
       - ./grafana/datasource.yml:/etc/grafana/provisioning/datasources/prometheus.yml
       - ./grafana/dashboard_provider.yml:/etc/grafana/provisioning/dashboards/dashboards.yml
       - ./grafana/dashboards:/var/lib/grafana/dashboards
+      - grafana-data:/var/lib/grafana
     depends_on:
       weaviate:
         condition: service_healthy
@@ -183,7 +206,7 @@ services:
       - .env
     environment:
       WAIT_HOSTS: mongodb:27017
-      MONGODB_URI: mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@${MONGODB_HOST_NAME}:${MONGODB_PORT}/
+      MONGODB_URI: $MONGO_CONNECTION_STRING
   mongodb:
     container_name: mongodb
     image: mongo:latest
@@ -210,7 +233,7 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-  
+
 networks:
   huudan:
     driver: bridge
@@ -221,3 +244,4 @@ volumes:
   mongodb-data:
   prometheus-data:
   weaviate-data:
+  grafana-data:

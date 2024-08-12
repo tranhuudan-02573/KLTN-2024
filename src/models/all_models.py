@@ -181,7 +181,8 @@ class Chat(BaseDocument):
         ]
 
 
-class Answer(BaseModel):
+class Answer(BaseDocument):
+    answer_id: UUID = Field(default_factory=uuid4, unique=True)
     content: Optional[str] = Field(max_length=1000)
     prompt_token: Optional[int] = None
     completion_token: Optional[int] = None
@@ -189,7 +190,8 @@ class Answer(BaseModel):
     total_time: Optional[float] = Field(ge=0)
 
 
-class Question(BaseModel):
+class Question(BaseDocument):
+    question_id: UUID = Field(default_factory=uuid4, unique=True)
     content: Optional[str] = Field(max_length=1000)
     role: Optional[str] = Field(default="user")
     chunks: Optional[List[ChunkSchema]] = Field(default_factory=list)
@@ -199,8 +201,8 @@ class Question(BaseModel):
 class Query(BaseDocument):
     query_id: UUID = Field(default_factory=uuid4, unique=True)
     chat: Optional[Link['Chat']]
-    question: Optional[Question]
-    answer: Optional[Answer] = None
+    question: Optional[Link['Question']]
+    answer: Optional[Link['Answer']] = None
     version: Optional[int] = Field(ge=0, default=0)
     created_at: Optional[datetime] = Field(default_factory=datetime.now)
     updated_at: Optional[datetime] = Field(default_factory=datetime.now)

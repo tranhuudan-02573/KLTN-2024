@@ -19,11 +19,11 @@ class ConversationItem(BaseModel):
 
 
 class ChunkPayload(BaseModel):
-    page_label: Optional[str] = None
-    chunk_id: Optional[float] = None
-    file_name: Optional[str] = None
-    chunks: Optional[str] = None
-    score: Optional[float] = None
+    page_label: str
+    chunk_id: float
+    file_name: str
+    chunks: str
+    score: float
 
     def to_custom_string(self) -> str:
         return (

@@ -8,7 +8,6 @@ from pydantic import BaseModel, EmailStr, Field
 from src.dtos.schema_out.bot import BotOut
 from src.dtos.schema_out.common import BaseOutModel
 from src.dtos.schema_out.knowledge import KnowledgeOut
-from src.models.all_models import Question, Answer, ChunkSchema
 
 
 # Enum classes for UserRole and GenderType

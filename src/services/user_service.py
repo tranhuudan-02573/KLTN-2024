@@ -137,9 +137,9 @@ class UserService:
         user = await UserService.find_user(id)
         if not verify_password(data.old_password, user.hashed_password):
             raise HTTPException(status_code=401, detail="Incorrect old password")
-        user.hashed_password = get_password(data.password)
         if verify_password(data.password, user.hashed_password):
             raise HTTPException(status_code=400, detail="New password cannot be the same as old password ")
+        user.hashed_password = get_password(data.password)
         rsi = await user.save()
         rs = UserOut(**rsi.dict())
         if data.is_logout:

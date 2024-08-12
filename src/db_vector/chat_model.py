@@ -27,19 +27,19 @@ def prepare_messages(queries: str, context: list[ChunkPayload], conversation: li
                             Nếu người dùng hỏi về chất liệu của bạn như một chatbot, hãy trả lời một cách tự nhiên và tránh sử dụng các kỹ thuật thuật ngữ nếu không cần thiết.""",
         }
     ]
-
     for message in conversation:
         if isinstance(message, dict):
             message = ConversationItem(**message)
         messages.append({"role": message.role, "content": message.message})
-
-    context2 = [chunk.to_custom_string() for chunk in context]
-    user_context = " ".join(context2)
+    user_context = ""
+    if context:
+        context2 = [chunk.to_custom_string() for chunk in context]
+        user_context = " ".join(context2)
 
     messages.append(
         {
             "role": "user",
-            "content": f"Please answer this query: '{queries}' with this provided context: {user_context}",
+            "content": f"Please answer this query: '{queries}' with this provided context: {user_context} if context is null then answer question content not found in my knowledge please try again with ask another question",
         }
     )
 
