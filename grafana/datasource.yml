@@ -16,6 +16,7 @@ datasources:
     uid: Prometheus
     # <string> url
     url: http://prometheus:9090
+    isDefault: true
     version: 1
     # <bool> allow users to edit datasources from the UI.
     editable: false

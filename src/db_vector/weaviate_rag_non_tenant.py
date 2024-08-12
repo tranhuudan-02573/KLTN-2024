@@ -3,13 +3,13 @@ import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from html import unescape
 from typing import List, Callable
+
 import weaviate
 import weaviate.classes as wvc
 from fastapi import HTTPException
 from langchain.docstore.document import Document as LangchainDocument
-from langchain_community.document_loaders import PyMuPDFLoader, TextLoader, Docx2txtLoader, DirectoryLoader
+from langchain_community.document_loaders import PyMuPDFLoader, TextLoader, Docx2txtLoader
 from minio import Minio
-from weaviate.auth import Auth
 from weaviate.classes.config import Property, DataType
 from weaviate.classes.query import Filter
 from weaviate.classes.query import Sort
@@ -44,40 +44,64 @@ connection_config = ConnectionConfig(
 
 
 def get_weaviate_client():
-    weaviate_client = weaviate.connect_to_weaviate_cloud(
-        cluster_url=settings.WEAVIATE_CLUSTER_URL,
-        auth_credentials=Auth.api_key(settings.WEAVIATE_API_KEY),
+    client = weaviate.connect_to_local(
+        host=settings.WEAVIATE_HOST,
         headers={
-            "X-HuggingFace-Api-Key": settings.HUGGINGFACE_API_KEY,
+            'X-HuggingFace-Api-Key': settings.HUGGINGFACE_API_KEY,
             "X-Cohere-Api-Key": settings.COHERE_API_KEY,
             "X-OpenAI-Api-Key": settings.OPENAI_API_KEY
         },
         additional_config=AdditionalConfig(
             timeout=Timeout(init=2, query=120, insert=300),
             connection=connection_config
-        ),
+        )
     )
-    return weaviate_client
+    return client
+
+
+# 
+# def get_weaviate_client():
+#     weaviate_client = weaviate.connect_to_weaviate_cloud(
+#         cluster_url=settings.WEAVIATE_CLUSTER_URL,
+#         auth_credentials=Auth.api_key(settings.WEAVIATE_API_KEY),
+#         headers={
+#             "X-HuggingFace-Api-Key": settings.HUGGINGFACE_API_KEY,
+#             "X-Cohere-Api-Key": settings.COHERE_API_KEY,
+#             "X-OpenAI-Api-Key": settings.OPENAI_API_KEY
+#         },
+#         additional_config=AdditionalConfig(
+#             timeout=Timeout(init=2, query=120, insert=300),
+# 
+#         ),
+#     )
+#     return weaviate_client
 
 
 def create_for_user(document):
     with get_weaviate_client() as client:
         collection = client.collections.create(
             name=document,
-            vector_index_config=wvc.config.Configure.VectorIndex.hnsw(
+            vector_index_config=wvc.config.Configure.VectorIndex.dynamic(
                 distance_metric=weaviate.classes.config.VectorDistances.COSINE,
-                ef_construction=128,
-                cleanup_interval_seconds=300,
-                ef=-1,
-                max_connections=32,
-                dynamic_ef_min=5,
-                dynamic_ef_max=500,
-                dynamic_ef_factor=8,
-                vector_cache_max_objects=1000000,
-                flat_search_cutoff=40000,
-                quantizer=wvc.config.Configure.VectorIndex.Quantizer.bq(
-                    rescore_limit=200,
-                    cache=True,
+                threshold=25000,
+                hnsw=wvc.config.Configure.VectorIndex.hnsw(
+                    ef_construction=128,
+                    cleanup_interval_seconds=300,
+                    ef=-1,
+                    max_connections=32,
+                    dynamic_ef_min=5,
+                    dynamic_ef_max=500,
+                    dynamic_ef_factor=8,
+                    vector_cache_max_objects=1000000,
+                    flat_search_cutoff=40000,
+                    quantizer=wvc.config.Configure.VectorIndex.Quantizer.bq(
+                        rescore_limit=200,
+                        cache=True,
+                    ),
+                ),
+                flat=wvc.config.Configure.VectorIndex.flat(
+                    quantizer=wvc.config.Configure.VectorIndex.Quantizer.bq(cache=True),
+                    vector_cache_max_objects=1000000,
                 ),
             ),
             inverted_index_config=wvc.config.Configure.inverted_index(

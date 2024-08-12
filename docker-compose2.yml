@@ -38,12 +38,6 @@
       MINIO_ACCESS_KEY: ${ACCESS_KEY_MINIO}
       MINIO_SECRET_KEY: ${SECRET_ACCESS_KEY_MINIO}
     command: server /data --console-address ":9001"
-  reranker-transformers:
-    image: cr.weaviate.io/semitechnologies/reranker-transformers:cross-encoder-ms-marco-MiniLM-L-6-v2
-    environment:
-      ENABLE_CUDA: '0'
-    networks:
-      - huudan
   minio-bucket:
     image: minio/mc
     depends_on:
@@ -58,6 +52,12 @@
       /usr/bin/mc policy download kltn2024/file-storage;
       exit 0;
       "
+  reranker-transformers:
+    image: cr.weaviate.io/semitechnologies/reranker-transformers:cross-encoder-ms-marco-MiniLM-L-6-v2
+    environment:
+      ENABLE_CUDA: '0'
+    networks:
+      - huudan
   weaviate:
     command:
       - --host
@@ -125,19 +125,6 @@
       - weaviate
     networks:
       - huudan
-  redis:
-    image: redis:latest
-    container_name: redis
-    restart: on-failure
-    ports:
-      - "6379:6379"
-    networks:
-      - huudan
-    healthcheck:
-      test: [ "CMD", "redis-cli", "ping" ]
-      interval: 10s
-      timeout: 5s
-      retries: 3
   mongodb:
     container_name: mongodb
     image: mongo:latest
@@ -158,6 +145,19 @@
       test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
       interval: 30s
       timeout: 10s
+      retries: 3
+  redis:
+    image: redis:latest
+    container_name: redis
+    restart: on-failure
+    ports:
+      - "6379:6379"
+    networks:
+      - huudan
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 10s
+      timeout: 5s
       retries: 3
 
 networks:
