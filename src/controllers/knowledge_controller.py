@@ -126,14 +126,6 @@ async def remove_file_to_knowledge(file_id: UUID, knowledge_id: UUID, user: User
     await KnowledgeService.remove_file_to_knowledge(knowledge_id, file_id, user)
 
 
-@knowledge_router.delete('/{knowledge_id}/files', summary="Delete multiple files", status_code=204)
-async def remove_files_from_knowledge(
-        knowledge_id: UUID,
-        file_ids_request: FileIdsRequest,
-        user: User = Depends(get_current_user)
-):
-    await KnowledgeService.remove_files_from_knowledge(knowledge_id, file_ids_request.file_ids, user)
-
 
 @knowledge_router.get('/{knowledge_id}/files/{file_id}', summary="Toggle file status", status_code=200,
                       response_model=FileListChunkOut)

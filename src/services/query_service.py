@@ -20,9 +20,7 @@ class QueryService:
                                     queryCreate: QueryCreate) -> GeneratePayload:
         bot = await BotService.find_bot(bot_id, user.id)
         chat = await ChatService.get_chat_for_bot(bot_id, user.id, chat_id)
-        # queries = await Query.find(Query.chat.id == chat.id).to_list()
         await bot.fetch_link(Bot.knowledges)
-        print(bot.knowledges)
         if not bot.knowledges:
             raise HTTPException(status_code=404, detail="Bot has no knowledge")
         knowledge_ids = [k.knowledge_id for k in bot.knowledges]
@@ -79,7 +77,15 @@ class QueryService:
         query = QueryService.get_query_for_chat(bot_id, user, chat_id, query_id)
         delete_user_history_chat_by_query_id(str(user.user_id), str(chat_id), query.query_id)
         await query.delete()
-        new = [q for q in chat.queries if q.to_ref().id != query.id]
+        new = []
+        item_removed = False
+        for q in chat.queries:
+            if q.to_ref().id == query.id:
+                item_removed = True
+                continue
+            new.append(q)
+        if not item_removed:
+            raise HTTPException(status_code=404, detail="Query not found")
         chat.queries = new
         await chat.save()
 

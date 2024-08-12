@@ -59,7 +59,7 @@ class UserService:
         except pymongo.errors.DuplicateKeyError:
             raise HTTPException(
                 status_code=400,
-                detail=" Bot with this name already exists. Please choose a different name."
+                detail="email is already registered"
             )
 
     @staticmethod
@@ -124,12 +124,11 @@ class UserService:
     @staticmethod
     async def update_user(id: UUID, data: UserUpdate) -> UserOut:
         user = await UserService.find_user(id)
-        user.first_name = data.first_name
-        user.last_name = data.last_name
-        user.gender = data.gender
-        user.birth_date = data.birth_date
+        user.first_name = data.first_name if data.first_name else user.first_name
+        user.last_name = data.last_name if data.last_name else user.last_name
+        user.gender = data.gender if data.gender else user.gender
+        user.birth_date = data.birth_date if data.birth_date else user.birth_date
         user_i = await user.save()
-        print(user_i)
         return UserOut(**user_i.dict())
 
     @staticmethod
@@ -148,6 +147,16 @@ class UserService:
             else:
                 raise HTTPException(status_code=400, detail="Refresh token is required to logout from all devices")
         return rs
+
+    @staticmethod
+    async def change_avatar_random(user_id: UUID) -> UserOut:
+        user = await User.find_one(User.user_id == user_id)
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        avatar_url = get_random_avatar()
+        user.avatar = avatar_url
+        user_i = await user.save()
+        return UserOut(**user_i.dict())
 
     @staticmethod
     async def get_all_users() -> List[UserOut]:
@@ -176,13 +185,3 @@ class UserService:
         ).skip(skip).limit(limit).to_list()
         users2 = [UserOut(**user.dict()) for user in users]
         return users2, total
-
-    @staticmethod
-    async def change_avatar_random(user_id: UUID) -> UserOut:
-        user = await User.find_one(User.user_id == user_id)
-        if not user:
-            raise HTTPException(status_code=404, detail="User not found")
-        avatar_url = get_random_avatar()
-        user.avatar = avatar_url
-        user_i = await user.save()
-        return UserOut(**user_i.dict())
