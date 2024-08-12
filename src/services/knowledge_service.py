@@ -1,11 +1,9 @@
-import asyncio
-from typing import Dict, Any, List
 from uuid import UUID
 
-import pymongo
 from beanie import PydanticObjectId
 from beanie.odm.operators.find.comparison import In
-from fastapi import HTTPException, Depends
+from fastapi import HTTPException
+
 from src.config.app_config import get_settings
 from src.db_vector.weaviate_rag_non_tenant import delete_one_knowledge_user, get_all_chunk_in_file, \
     delete_one_file_knowledge
@@ -94,9 +92,15 @@ class KnowledgeService:
             raise HTTPException(status_code=404, detail="Knowledge not found")
         await knowledge.delete()
         delete_one_knowledge_user(user.username, generate_key_knowledge(knowledge.knowledge_id))
-        new = [k for k in user.knowledges if k.to_ref().id != knowledge.id]
-        # item_removed = False
-        
+        item_removed = False
+        new = []
+        for k in user.knowledges:
+            if k.to_ref().id == knowledge.id:
+                item_removed = True
+                continue
+            new.append(k)
+        if not item_removed:
+            raise HTTPException(status_code=404, detail="Knowledge not found in user")
         user.knowledges = new
         await user.save()
 
@@ -108,36 +112,20 @@ class KnowledgeService:
         file = await File.find_one(File.file_id == file_id, File.knowledge.id == knowledge.id)
         if not file:
             raise HTTPException(status_code=404, detail="File not found")
-        new = [f for f in knowledge.files if f.to_ref().id != file.id]
+        new = []
+        item_removed = False
+        for f in knowledge.files:
+            if f.to_ref().id == file.id:
+                item_removed = True
+                continue
+            new.append(f)
+        if not item_removed:
+            raise HTTPException(status_code=404, detail="File not found in knowledge")
         knowledge.files = new
         await knowledge.save()
         await file.delete()
         delete_one_file_knowledge(user.username, generate_key_knowledge(knowledge.knowledge_id),
                                   get_key_name_minio(file.url))
-
-    @staticmethod
-    async def remove_files_from_knowledge(knowledge_id: UUID, file_ids: List[UUID], user: User):
-        knowledge = await Knowledge.find_one(Knowledge.knowledge_id == knowledge_id, Knowledge.owner.id == user.id)
-        if not knowledge:
-            raise HTTPException(status_code=404, detail="Knowledge not found")
-
-        async def remove_file(file_id: UUID):
-            file = await File.find_one(File.file_id == file_id, File.knowledge.id == knowledge.id)
-            if not file:
-                return None
-            await file.delete()
-            delete_one_file_knowledge(user.username, generate_key_knowledge(knowledge.knowledge_id),
-                                      get_key_name_minio(file.url))
-            return file.id
-
-        removed_file_ids = await asyncio.gather(*[remove_file(file_id) for file_id in file_ids])
-        removed_file_ids = [id for id in removed_file_ids if id is not None]
-
-        knowledge.files = [f for f in knowledge.files if f.to_ref().id not in removed_file_ids]
-        await knowledge.save()
-
-        if not removed_file_ids:
-            raise HTTPException(status_code=404, detail="No files found to delete")
 
     @staticmethod
     async def toggle_file_status(file_id: UUID, knowledge_id: UUID, user_id: PydanticObjectId) -> FileOut:

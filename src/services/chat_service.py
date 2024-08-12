@@ -103,9 +103,6 @@ class ChatService:
             raise HTTPException(status_code=404, detail="Chat not found")
         await chat.fetch_link(Chat.queries)
         history = convert_chat_history_to_items(str(user_id.user_id), str(chat_id))
-        print(chat.queries)
-        print(chat.queries[0].question)
-        print(chat.queries[0].answer)
         return ChatListQueryOut(
             chat=ChatOut(
                 chat_id=chat.chat_id,
@@ -142,7 +139,15 @@ class ChatService:
         if not chat:
             raise HTTPException(status_code=404, detail="Chat not found")
         await chat.delete()
-        new = [c for c in bot.chats if c.to_ref().id != chat.id]
+        new = []
+        item_removed = False
+        for c in bot.chats:
+            if c.to_ref().id == chat.id:
+                item_removed = True
+                continue
+            new.append(c)
+        if not item_removed:
+            raise HTTPException(status_code=404, detail="Chat not found")
         bot.chats = new
         await bot.save()
 
