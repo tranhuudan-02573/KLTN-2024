@@ -10,6 +10,7 @@ from fastapi import HTTPException
 from langchain.docstore.document import Document as LangchainDocument
 from langchain_community.document_loaders import PyMuPDFLoader, TextLoader, Docx2txtLoader
 from minio import Minio
+from weaviate.auth import Auth
 from weaviate.classes.config import Property, DataType
 from weaviate.classes.query import Filter
 from weaviate.classes.query import Sort
@@ -43,38 +44,38 @@ connection_config = ConnectionConfig(
 )
 
 
-def get_weaviate_client():
-    client = weaviate.connect_to_local(
-        host=settings.WEAVIATE_HOST,
-        headers={
-            'X-HuggingFace-Api-Key': settings.HUGGINGFACE_API_KEY,
-            "X-Cohere-Api-Key": settings.COHERE_API_KEY,
-            "X-OpenAI-Api-Key": settings.OPENAI_API_KEY
-        },
-        additional_config=AdditionalConfig(
-            timeout=Timeout(init=2, query=120, insert=300),
-            connection=connection_config
-        )
-    )
-    return client
-
-
-# 
 # def get_weaviate_client():
-#     weaviate_client = weaviate.connect_to_weaviate_cloud(
-#         cluster_url=settings.WEAVIATE_CLUSTER_URL,
-#         auth_credentials=Auth.api_key(settings.WEAVIATE_API_KEY),
+#     client = weaviate.connect_to_local(
+#         host=settings.WEAVIATE_HOST,
 #         headers={
-#             "X-HuggingFace-Api-Key": settings.HUGGINGFACE_API_KEY,
+#             'X-HuggingFace-Api-Key': settings.HUGGINGFACE_API_KEY,
 #             "X-Cohere-Api-Key": settings.COHERE_API_KEY,
 #             "X-OpenAI-Api-Key": settings.OPENAI_API_KEY
 #         },
 #         additional_config=AdditionalConfig(
 #             timeout=Timeout(init=2, query=120, insert=300),
-# 
-#         ),
+#             connection=connection_config
+#         )
 #     )
-#     return weaviate_client
+#     return client
+
+
+# 
+def get_weaviate_client():
+    weaviate_client = weaviate.connect_to_weaviate_cloud(
+        cluster_url=settings.WEAVIATE_CLUSTER_URL,
+        auth_credentials=Auth.api_key(settings.WEAVIATE_API_KEY),
+        headers={
+            "X-HuggingFace-Api-Key": settings.HUGGINGFACE_API_KEY,
+            "X-Cohere-Api-Key": settings.COHERE_API_KEY,
+            "X-OpenAI-Api-Key": settings.OPENAI_API_KEY
+        },
+        additional_config=AdditionalConfig(
+            timeout=Timeout(init=2, query=120, insert=300),
+
+        ),
+    )
+    return weaviate_client
 
 
 def create_for_user(document):

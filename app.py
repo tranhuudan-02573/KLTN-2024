@@ -149,7 +149,8 @@ async def generic_exception_handler(request: Request, exc: Exception):
 
 async def startup_event():
     try:
-        mongo_string = f"mongodb://{settings.MONGO_INITDB_ROOT_USERNAME}:{settings.MONGO_INITDB_ROOT_PASSWORD}@{settings.MONGODB_HOST_NAME}:{settings.MONGODB_PORT}/"
+        # mongo_string = f"mongodb://{settings.MONGO_INITDB_ROOT_USERNAME}:{settings.MONGO_INITDB_ROOT_PASSWORD}@{settings.MONGODB_HOST_NAME}:{settings.MONGODB_PORT}/"
+        mongo_string = settings.MONGO_CONNECTION_STRING2
         db_client = AsyncIOMotorClient(mongo_string).kltn
         await init_beanie(
             database=db_client,
