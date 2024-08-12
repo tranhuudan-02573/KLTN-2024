@@ -17,9 +17,9 @@ class QueryService:
     @staticmethod
     async def create_query_for_chat(bot_id: UUID, user: User, chat_id: UUID,
                                     queryCreate: QueryCreate) -> GeneratePayload:
-        print(queryCreate)
         bot = await BotService.find_bot(bot_id, user.id)
         chat = await ChatService.get_chat_for_bot(bot_id, user.id, chat_id)
+        # queries = await Query.find(Query.chat.id == chat.id).to_list()
         kn = await BotService.get_all_knowledge_in_bots(bot_id, user.id)
         knowledge_ids = [k.knowledge_id for k in kn.knowledges]
         knowledge_names = await KnowledgeService.get_knowledges_by_ids(knowledge_ids)
@@ -30,9 +30,10 @@ class QueryService:
             role="user",
             chunks=chunks
         )
+        insert_ = await qa.insert()
         query = Query(
             chat=chat,
-            question=qa,
+            question=insert_,
         )
         qs = await query.insert()
         chat.queries.append(qs)

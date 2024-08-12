@@ -20,9 +20,12 @@ from src.controllers.knowledge_controller import knowledge_router
 from src.controllers.query_controller import query_router
 from src.db_vector.chat_model import generate_stream
 from src.dtos.schema_in.query import GeneratePayload
-from src.models.all_models import Bot, Query, Knowledge, Chat, File
+from src.models.all_models import Bot, Query, Knowledge, Chat, File, Question, Answer
 from src.models.all_models import User
 from src.utils.minio_util import create_bucket_if_not_exist
+from prometheus_fastapi_instrumentator import Instrumentator
+
+from src.utils.redis_util import set_user_history_chat
 
 # Initialize FastAPI application and settings
 settings = get_settings()
@@ -30,12 +33,12 @@ app = FastAPI(
     title=settings.APP_NAME,
     openapi_url=f"{settings.API_V1_STR}/openapi.json"
 )
-
+Instrumentator().instrument(app).expose(app)
 import json
 
 
-@app.websocket("/ws/bots/{bot_id}/chats/{chat_id}/generate_stream")
-async def websocket_generate_stream2(websocket: WebSocket):
+@app.websocket("/ws/users/{user_id}/chats/{chat_id}/generate_stream")
+async def websocket_generate_stream2(chat_id: uuid.UUID, user_id: uuid.UUID, websocket: WebSocket):
     await websocket.accept()
     while True:
         try:
@@ -61,11 +64,17 @@ async def websocket_generate_stream2(websocket: WebSocket):
                         "finish_reason": "stop",
                         "full_text": full_text
                     })
-                    query.answer.completion_token = chunk.x_groq.usage.completion_tokens
-                    query.answer.prompt_token = chunk.x_groq.usage.prompt_tokens
-                    query.answer.total_time = chunk.x_groq.usage.total_time
-                    query.answer.content = full_text
+                    answer = Answer(
+                        content=full_text,
+                        prompt_token=chunk.x_groq.usage.prompt_tokens,
+                        completion_token=chunk.x_groq.usage.completion_tokens,
+                        total_time=chunk.x_groq.usage.total_time,
+                        role="assistant"
+                    )
+                    insert_ = await answer.insert()
+                    query.answer = insert_
                     await query.save()
+                    set_user_history_chat(str(user_id), str(chat_id), full_text, "assistant", query_id)
                 else:
                     full_text += chunk.choices[0].delta.content
                     await websocket.send_json({
@@ -73,12 +82,6 @@ async def websocket_generate_stream2(websocket: WebSocket):
                         "finish_reason": None,
                         "full_text": full_text
                     })
-
-            await websocket.send_json({
-                "message": "Stream completed successfully",
-                "finish_reason": "stop",
-                "full_text": full_text
-            })
         except WebSocketDisconnect:
             print("WebSocket disconnected")
             break
@@ -150,11 +153,11 @@ async def generic_exception_handler(request: Request, exc: Exception):
 async def startup_event():
     try:
         # mongo_string = f"mongodb://{settings.MONGO_INITDB_ROOT_USERNAME}:{settings.MONGO_INITDB_ROOT_PASSWORD}@{settings.MONGODB_HOST_NAME}:{settings.MONGODB_PORT}/"
-        mongo_string = settings.MONGO_CONNECTION_STRING2
+        mongo_string = settings.MONGO_CONNECTION_STRING
         db_client = AsyncIOMotorClient(mongo_string).kltn
         await init_beanie(
             database=db_client,
-            document_models=[Knowledge, Bot, Query, User, Chat, File]
+            document_models=[Knowledge, Bot, Query, User, Chat, File, Question, Answer]
         )
     except Exception as e:
         print(f"An error occurred: {e}")

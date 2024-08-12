@@ -36,8 +36,6 @@ class Settings(BaseSettings):
     MONGO_CONNECTION_STRING2: str = os.getenv('MONGO_CONNECTION_STRING2')
     MONGO_INITDB_ROOT_USERNAME: str = os.getenv('MONGO_INITDB_ROOT_USERNAME')
     MONGO_INITDB_ROOT_PASSWORD: str = os.getenv('MONGO_INITDB_ROOT_PASSWORD')
-    MONGODB_HOST_NAME: str = os.getenv('MONGODB_HOST_NAME')
-    MONGODB_PORT: int = os.getenv('MONGODB_PORT')
     SECRET_KEY: str = os.getenv('SECRET_KEY')
     WEAVIATE_HOST: str = os.getenv('WEAVIATE_HOST')
     RESET_TOKEN_EXPIRE_MINUTES: int = os.getenv('RESET_TOKEN_EXPIRE_MINUTES')

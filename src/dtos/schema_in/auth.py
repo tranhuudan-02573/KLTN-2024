@@ -20,9 +20,9 @@ class AcceptResetTokenPayload(PasswordMixin):
 
 
 class TokenPayload(BaseModel):
-    sub: Optional[UUID] = None
-    exp: Optional[int] = None
-    role: Optional[str] = None
+    sub: UUID
+    exp: int
+    role: str
 
 
 class RefreshTokenPayload(BaseModel):

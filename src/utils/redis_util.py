@@ -80,14 +80,14 @@ def set_user_history_chat(user_id: str, chat_id: str, message: str, role: str, q
         pipe.execute()
 
 
-def get_user_history_chat(user_id: str, chat_id: str, limit: int = 20) -> List[Dict]:
+def get_user_history_chat(user_id: str, chat_id: str, limit: int = 10) -> List[Dict]:
     key = f"user:{user_id}:chat:{chat_id}"
     chat_history = redis_client.lrange(key, -limit, -1)
     chat_history = [json.loads(entry) for entry in chat_history]
     return chat_history
 
 
-def convert_chat_history_to_items(user_id: str, chat_id: str, limit: int = 20) -> List[ConversationItem]:
+def convert_chat_history_to_items(user_id: str, chat_id: str, limit: int = 10) -> List[ConversationItem]:
     chat_history = get_user_history_chat(user_id, chat_id, limit)
     conversation_items = [
         ConversationItem(message=entry['message'], role=entry['role'])

@@ -44,26 +44,23 @@ class ChatService:
     @staticmethod
     async def create_chat_for_bot(bot_id: UUID, user_id: PydanticObjectId, chat: ChatCreate) -> ChatOut:
         bot_u = await BotService.find_bot(bot_id, user_id)
-        try:
-            chat_in = Chat(
-                title=chat.title,
-                bot=bot_u
-            )
-            chat = await chat_in.insert()
-            bot_u.chats.append(chat)
-            await bot_u.save()
-            return ChatOut(
-                chat_id=chat.chat_id,
-                title=chat.title,
-                updated_at=chat.updated_at,
-                created_at=chat.created_at
+        bot_e = await Chat.find_one(Chat.title == chat.title, Chat.bot.id == bot_u.id)
+        if bot_e:
+            raise HTTPException(status_code=400, detail="Chat with this title already exists")
+        chat_in = Chat(
+            title=chat.title,
+            bot=bot_u
+        )
+        chat = await chat_in.insert()
+        bot_u.chats.append(chat)
+        await bot_u.save()
+        return ChatOut(
+            chat_id=chat.chat_id,
+            title=chat.title,
+            updated_at=chat.updated_at,
+            created_at=chat.created_at
 
-            )
-        except pymongo.errors.DuplicateKeyError:
-            raise HTTPException(
-                status_code=400,
-                detail=" Bot with this name already exists. Please choose a different name."
-            )
+        )
 
     @staticmethod
     async def get_all_chat_for_bot(bot_id: UUID, user_id: PydanticObjectId) -> BotChatOut:
@@ -105,7 +102,6 @@ class ChatService:
             raise HTTPException(status_code=404, detail="Chat not found")
         await chat.fetch_link(Chat.queries)
         history = convert_chat_history_to_items(str(user_id.user_id), str(chat_id))
-        print(history)
         return ChatListQueryOut(
             chat=ChatOut(
                 chat_id=chat.chat_id,
@@ -113,7 +109,14 @@ class ChatService:
                 updated_at=chat.updated_at,
                 created_at=chat.created_at
             ),
-            queries=[QueryOut(**q.dict()) for q in chat.queries],
+            queries=[QueryOut(
+                query_id=q.query_id,
+                question=q.question.content,
+                answer=q.answer.content,
+                version=q.version,
+                created_at=q.created_at,
+                updated_at=q.updated
+            ) for q in chat.queries],
             history=history
         )
 
@@ -135,11 +138,7 @@ class ChatService:
         chat = await Chat.find_one(Chat.chat_id == chat_id, Chat.bot.id == bot.id)
         if not chat:
             raise HTTPException(status_code=404, detail="Chat not found")
-        try:
-            chat.title = chat_u.title
-            return await chat.save()
-        except pymongo.errors.DuplicateKeyError:
-            raise HTTPException(
-                status_code=400,
-                detail=" Bot with this name already exists. Please choose a different name."
-            )
+        if chat.title == chat_u.title:
+            raise HTTPException(status_code=400, detail="Chat title already exists")
+        chat.title = chat_u.title
+        return await chat.save()

@@ -29,3 +29,4 @@ tiktoken
 transformers
 torch
 docx2txt
+prometheus-fastapi-instrumentator

@@ -34,54 +34,40 @@ class BotService:
 
     @staticmethod
     async def create_bot(user: User, bot: BotCreate) -> BotOut:
-        try:
-            new_bot = Bot(
-                name=bot.name,
-                avatar=get_random_avatar_bot(),
-                description=bot.description,
-                owner=user,
-            )
-            b = await new_bot.insert()
-            user.bots.append(b)
-            await user.save()
-            return BotOut(
-                bot_id=b.bot_id,
-                name=b.name,
-                avatar=b.avatar,
-                description=b.description,
-                is_active=b.is_active,
-                persona_prompt=b.persona_prompt,
-                is_memory_enabled=b.is_memory_enabled,
-                updated_at=b.updated_at,
-                created_at=b.created_at
-            )
-        except pymongo.errors.DuplicateKeyError:
-            raise HTTPException(
-                status_code=400,
-                detail=" Bot with this name already exists. Please choose a different name."
-            )
+        bot_find_one = await Bot.find_one(Bot.name == bot.name, Bot.owner.id == user.id)
+        if bot_find_one:
+            raise HTTPException(status_code=400, detail="Bot name already exists")
+        new_bot = Bot(
+            name=bot.name,
+            avatar=get_random_avatar_bot(),
+            description=bot.description,
+            owner=user,
+        )
+        b = await new_bot.insert()
+        user.bots.append(b)
+        await user.save()
+        return BotOut(
+            bot_id=b.bot_id,
+            name=b.name,
+            avatar=b.avatar,
+            description=b.description,
+            is_active=b.is_active,
+            persona_prompt=b.persona_prompt,
+            is_memory_enabled=b.is_memory_enabled,
+            updated_at=b.updated_at,
+            created_at=b.created_at
+        )
 
     @staticmethod
     async def update_bot(bot_id: UUID, user_id: PydanticObjectId, data: BotUpdate) -> BotOut:
         bot = await BotService.find_bot(bot_id, user_id)
-        try:
-            bot.name = data.name
-            bot.description = data.description
-            bot.is_active = data.active
-            bot.persona_prompt = data.prompt
-            bot.is_memory_enabled = data.memory
-            await bot.save()
-            return BotOut(**bot.dict())
-        except pymongo.errors.DuplicateKeyError:
-            raise HTTPException(
-                status_code=400,
-                detail=" Bot with this name already exists. Please choose a different name."
-            )
-
-    @staticmethod
-    async def update_prompt_bot(bot_id: UUID, prompt: str, user_id: PydanticObjectId) -> BotOut:
-        bot = await BotService.find_bot(bot_id, user_id)
-        bot.persona_prompt = prompt
+        if bot.name == data.name:
+            raise HTTPException(status_code=400, detail="Bot name already exists")
+        bot.name = data.name if data.name else bot.name
+        bot.description = data.description if data.description else bot.description
+        bot.is_active = data.active if data.active is not None else bot.is_active
+        bot.persona_prompt = data.prompt if data.prompt else bot.persona_prompt
+        bot.is_memory_enabled = data.memory if data.memory is not None else bot.is_memory_enabled
         await bot.save()
         return BotOut(**bot.dict())
 
@@ -92,20 +78,6 @@ class BotService:
         new = [b for b in user_id.bots if b.to_ref().id != bot.id]
         user_id.bots = new
         await user_id.save()
-
-    @staticmethod
-    async def toggle_bot_status(bot_id: UUID, user_id: PydanticObjectId) -> BotOut:
-        bot = await BotService.find_bot(bot_id, user_id)
-        bot.is_active = not bot.is_active
-        await bot.save()
-        return BotOut(**bot.dict())
-
-    @staticmethod
-    async def toggle_bot_memory(bot_id: UUID, user_id: PydanticObjectId) -> BotOut:
-        bot = await BotService.find_bot(bot_id, user_id)
-        bot.is_memory_enabled = not bot.is_memory_enabled
-        await bot.save()
-        return BotOut(**bot.dict())
 
     @staticmethod
     async def get_all_bots() -> List[BotOut]:
@@ -175,8 +147,17 @@ class BotService:
         knowledge = await Knowledge.find_one(Knowledge.knowledge_id == knowledge_id, Knowledge.owner.id == user_id)
         if not knowledge:
             raise HTTPException(status_code=404, detail=KNOWLEDGE_NOT_FOUND)
-        new = [k for k in bot.knowledges if k.to_ref().id != knowledge.id]
-        bot.knowledges = new
+        item_removed = False
+        # Create a new list excluding the knowledge with the matching id
+        new_knowledges = []
+        for k in bot.knowledges:
+            if k.to_ref().id == knowledge.id:
+                item_removed = True
+                continue  # Skip adding this item to the new list
+            new_knowledges.append(k)
+        if not item_removed:
+            raise HTTPException(status_code=404, detail="Knowledge not found in bot")
+        bot.knowledges = new_knowledges
         await bot.save()
 
     @staticmethod

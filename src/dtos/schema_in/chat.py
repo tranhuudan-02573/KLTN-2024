@@ -1,12 +1,5 @@
-# #######################################QUERYQUERYQUERYQUERYQUERYQUERYQUERYQUERYQUERYQUERY##############################################################
-from typing import Optional
-from uuid import UUID
-
 from pydantic import BaseModel
 from pydantic import Field
-
-
-# #######################################BOTBOTBOTBOTBOTBOTBOT####################################################
 
 
 class ChatCreate(BaseModel):
@@ -14,6 +7,4 @@ class ChatCreate(BaseModel):
 
 
 class ChatUpdate(BaseModel):
-    title: Optional[str] = Field(None, max_length=200)
-
-
+    title: str = Field(None, max_length=200)
