@@ -32,8 +32,12 @@ class Settings(BaseSettings):
     TEMPLATE_FOLDER: str = Path(__file__).parent.parent / os.getenv('TEMPLATE_FOLDER')
     USE_CREDENTIALS: bool = os.getenv('USE_CREDENTIALS')
     API_V1_STR: str = os.getenv('API_V1_STR')
-    MONGO_CONNECTION_STRING: str = os.getenv('MONGO_CONNECTION_STRING')
+    MONGO_INITDB_ROOT_USERNAME: str = os.getenv('MONGO_INITDB_ROOT_USERNAME')
+    MONGO_INITDB_ROOT_PASSWORD: str = os.getenv('MONGO_INITDB_ROOT_PASSWORD')
+    MONGODB_HOST_NAME: str = os.getenv('MONGODB_HOST_NAME')
+    MONGODB_PORT: int = os.getenv('MONGODB_PORT')
     SECRET_KEY: str = os.getenv('SECRET_KEY')
+    WEAVIATE_HOST: str = os.getenv('WEAVIATE_HOST')
     RESET_TOKEN_EXPIRE_MINUTES: int = os.getenv('RESET_TOKEN_EXPIRE_MINUTES')
     SESSION_RESET_TOKEN_EXPIRE_MINUTES: int = os.getenv('SESSION_RESET_TOKEN_EXPIRE_MINUTES')
     BACKEND_PORT: int = os.getenv('BACKEND_PORT')
@@ -54,6 +58,7 @@ class Settings(BaseSettings):
     MODEL_EMBEDDING_NAME: str = os.getenv('MODEL_EMBEDDING_NAME')
     GROQ_API_KEY: str = os.getenv('GROQ_API_KEY')
     MODEL_GENERATE_NAME: str = os.getenv('MODEL_GENERATE_NAME')
+
     class Config:
         env_file = env_path
         env_file_encoding = 'utf-8'

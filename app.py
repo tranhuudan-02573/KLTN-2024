@@ -53,22 +53,27 @@ async def websocket_generate_stream2(websocket: WebSocket):
                 conversation=payload1['conversation']
             )
             full_text = ""
-            start_time = time.time()
             async for chunk in generate_stream(payload.query, payload.context, payload.conversation):
                 print(chunk)
-                if chunk.choices[0].delta.content is not None:
+                if chunk.choices[0].finish_reason == "stop":
+                    await websocket.send_json({
+                        "message": "Stream completed successfully",
+                        "finish_reason": "stop",
+                        "full_text": full_text
+                    })
+                    query.answer.completion_token = chunk.x_groq.usage.completion_tokens
+                    query.answer.prompt_token = chunk.x_groq.usage.prompt_tokens
+                    query.answer.total_time = chunk.x_groq.usage.total_time
+                    query.answer.content = full_text
+                    await query.save()
+                else:
                     full_text += chunk.choices[0].delta.content
                     await websocket.send_json({
                         "message": chunk.choices[0].delta.content,
                         "finish_reason": None,
                         "full_text": full_text
                     })
-                else:
-                    query.answer.completion_token = chunk.usage.completion_tokens
-                    query.answer.prompt_token = chunk.usage.prompt_tokens
-                    query.answer.total_time = time.time() - start_time
-                    query.answer.content = full_text
-                    await query.save()
+
             await websocket.send_json({
                 "message": "Stream completed successfully",
                 "finish_reason": "stop",
@@ -144,7 +149,8 @@ async def generic_exception_handler(request: Request, exc: Exception):
 
 async def startup_event():
     try:
-        db_client = AsyncIOMotorClient(settings.MONGO_CONNECTION_STRING).kltn
+        mongo_string = f"mongodb://{settings.MONGO_INITDB_ROOT_USERNAME}:{settings.MONGO_INITDB_ROOT_PASSWORD}@{settings.MONGODB_HOST_NAME}:{settings.MONGODB_PORT}/"
+        db_client = AsyncIOMotorClient(mongo_string).kltn
         await init_beanie(
             database=db_client,
             document_models=[Knowledge, Bot, Query, User, Chat, File]

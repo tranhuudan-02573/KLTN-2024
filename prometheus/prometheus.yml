@@ -3,4 +3,9 @@ scrape_configs:
     scrape_interval: 2s
     static_configs:
       - targets:
-          - weaviate:2112
+          - weaviate:8080
+  - job_name: mongodb
+    scrape_interval: 5s
+    static_configs:
+      - targets:
+          - mongodb_exporter:9216
