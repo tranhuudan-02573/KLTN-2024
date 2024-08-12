@@ -5,7 +5,7 @@ from fastapi import HTTPException
 from src.db_vector.weaviate_rag_non_tenant import search_in_knowledge_user
 from src.dtos.schema_in.query import QueryCreate, GeneratePayload, ChunkPayload, QueryUpdate
 from src.dtos.schema_out.chat import QueryChatOut, ChatOut
-from src.models.all_models import Query, Question, User, ChunkSchema, Chat
+from src.models.all_models import Query, Question, User, ChunkSchema, Chat, Knowledge, Bot
 from src.services.bot_service import BotService
 from src.services.chat_service import ChatService
 from src.services.knowledge_service import KnowledgeService
@@ -20,8 +20,11 @@ class QueryService:
         bot = await BotService.find_bot(bot_id, user.id)
         chat = await ChatService.get_chat_for_bot(bot_id, user.id, chat_id)
         # queries = await Query.find(Query.chat.id == chat.id).to_list()
-        kn = await BotService.get_all_knowledge_in_bots(bot_id, user.id)
-        knowledge_ids = [k.knowledge_id for k in kn.knowledges]
+        await bot.fetch_link(Bot.knowledges)
+        print(bot.knowledges)
+        if not bot.knowledges:
+            raise HTTPException(status_code=404, detail="Bot has no knowledge")
+        knowledge_ids = [k.knowledge_id for k in bot.knowledges]
         knowledge_names = await KnowledgeService.get_knowledges_by_ids(knowledge_ids)
         chunks = search_in_knowledge_user(user.username, bot.persona_prompt + " " + queryCreate.query, knowledge_names)
         context = [ChunkPayload(**chunk.dict()) for chunk in chunks]

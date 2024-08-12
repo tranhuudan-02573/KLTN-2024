@@ -9,7 +9,8 @@ from src.dtos.schema_in.chat import ChatCreate
 from src.dtos.schema_out.bot import BotKnowledgeChatOut, BotOut, BotChatOut, ChatListQueryOut
 from src.dtos.schema_out.chat import ChatOut, QueryOut
 from src.dtos.schema_out.knowledge import KnowledgeOut
-from src.models.all_models import Chat, Bot, User
+from src.dtos.schema_out.query import QuestionOut, AnswerOut
+from src.models.all_models import Chat, Bot, User, ChunkSchema
 from src.services.bot_service import BotService
 from src.utils.redis_util import convert_chat_history_to_items
 
@@ -102,6 +103,9 @@ class ChatService:
             raise HTTPException(status_code=404, detail="Chat not found")
         await chat.fetch_link(Chat.queries)
         history = convert_chat_history_to_items(str(user_id.user_id), str(chat_id))
+        print(chat.queries)
+        print(chat.queries[0].question)
+        print(chat.queries[0].answer)
         return ChatListQueryOut(
             chat=ChatOut(
                 chat_id=chat.chat_id,
@@ -111,11 +115,22 @@ class ChatService:
             ),
             queries=[QueryOut(
                 query_id=q.query_id,
-                question=q.question.content,
-                answer=q.answer.content,
+                question=QuestionOut(
+                    content=q.question.content,
+                    role=q.question.role,
+                    chunks=[ChunkSchema(**c.dict()) for c in q.question.chunks],
+                    context=q.question.context,
+                ),
+                answer=AnswerOut(
+                    content=q.answer.content,
+                    role=q.answer.role,
+                    prompt_token=q.answer.prompt_token,
+                    completion_token=q.answer.completion_token,
+                    total_time=q.answer.total_time
+                ),
                 version=q.version,
                 created_at=q.created_at,
-                updated_at=q.updated
+                updated_at=q.updated_at
             ) for q in chat.queries],
             history=history
         )
