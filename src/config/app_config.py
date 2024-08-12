@@ -32,6 +32,8 @@ class Settings(BaseSettings):
     TEMPLATE_FOLDER: str = Path(__file__).parent.parent / os.getenv('TEMPLATE_FOLDER')
     USE_CREDENTIALS: bool = os.getenv('USE_CREDENTIALS')
     API_V1_STR: str = os.getenv('API_V1_STR')
+    MONGO_CONNECTION_STRING: str = os.getenv('MONGO_CONNECTION_STRING')
+    MONGO_CONNECTION_STRING2: str = os.getenv('MONGO_CONNECTION_STRING2')
     MONGO_INITDB_ROOT_USERNAME: str = os.getenv('MONGO_INITDB_ROOT_USERNAME')
     MONGO_INITDB_ROOT_PASSWORD: str = os.getenv('MONGO_INITDB_ROOT_PASSWORD')
     MONGODB_HOST_NAME: str = os.getenv('MONGODB_HOST_NAME')
