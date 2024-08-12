@@ -189,6 +189,12 @@ class Answer(BaseDocument):
     role: Optional[str] = Field(default="assistant")
     total_time: Optional[float] = Field(ge=0)
 
+    class Settings:
+        name = "answers"
+        indexes = [
+            "answer_id",
+        ]
+
 
 class Question(BaseDocument):
     question_id: UUID = Field(default_factory=uuid4, unique=True)
@@ -196,6 +202,12 @@ class Question(BaseDocument):
     role: Optional[str] = Field(default="user")
     chunks: Optional[List[ChunkSchema]] = Field(default_factory=list)
     context: Optional[str] = None
+
+    class Settings:
+        name = "questions"
+        indexes = [
+            "question_id",
+        ]
 
 
 class Query(BaseDocument):
