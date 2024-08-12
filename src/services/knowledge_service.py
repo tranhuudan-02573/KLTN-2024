@@ -95,6 +95,8 @@ class KnowledgeService:
         await knowledge.delete()
         delete_one_knowledge_user(user.username, generate_key_knowledge(knowledge.knowledge_id))
         new = [k for k in user.knowledges if k.to_ref().id != knowledge.id]
+        # item_removed = False
+        
         user.knowledges = new
         await user.save()
 
