@@ -38,7 +38,7 @@ import json
 
 
 @app.websocket("/ws/chats/{chat_id}/generate_stream")
-async def websocket_generate_stream2(chat_id: uuid.UUID, bot_id: uuid.UUID, websocket: WebSocket):
+async def websocket_generate_stream2(chat_id: uuid.UUID, websocket: WebSocket):
     await websocket.accept()
     while True:
         try:
