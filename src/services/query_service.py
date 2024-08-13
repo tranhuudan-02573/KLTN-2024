@@ -43,6 +43,7 @@ class QueryService:
         set_user_history_chat(str(user.user_id), str(chat_id), queryCreate.query, "user", qs.query_id)
         conversation = convert_chat_history_to_items(str(user.user_id), str(chat_id))
         rs = GeneratePayload(
+            user_id=user.user_id,
             query_id=qs.query_id,
             query=queryCreate.query,
             context=context,
@@ -64,6 +65,7 @@ class QueryService:
         conversation = convert_chat_history_to_items(str(user.user_id), str(chat_id))
         context = [ChunkPayload(**chunk.dict()) for chunk in chunks]
         rs = GeneratePayload(
+            user_id=user.user_id,
             query_id=query.query_id,
             query=queryUpdate.query,
             context=context,

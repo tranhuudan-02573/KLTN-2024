@@ -33,6 +33,7 @@ class ChunkPayload(BaseModel):
 
 
 class GeneratePayload(BaseModel):
+    user_id: UUID
     query_id: UUID
     query: str
     context: list[ChunkPayload]

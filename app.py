@@ -37,8 +37,8 @@ Instrumentator().instrument(app).expose(app)
 import json
 
 
-@app.websocket("/ws/users/{user_id}/chats/{chat_id}/generate_stream")
-async def websocket_generate_stream2(chat_id: uuid.UUID, user_id: uuid.UUID, websocket: WebSocket):
+@app.websocket("/ws/chats/{chat_id}/generate_stream")
+async def websocket_generate_stream2(chat_id: uuid.UUID, bot_id: uuid.UUID, websocket: WebSocket):
     await websocket.accept()
     while True:
         try:
@@ -49,7 +49,9 @@ async def websocket_generate_stream2(chat_id: uuid.UUID, user_id: uuid.UUID, web
             query = await Query.find_one(Query.query_id == uuid.UUID(query_id))
             if not query:
                 raise HTTPException(status_code=404, detail="Query not found")
+            user_id = payload1['user_id']
             payload = GeneratePayload(
+                user_id=user_id,
                 query_id=query_id,
                 query=payload1['query'],
                 context=payload1['context'],
