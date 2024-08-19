@@ -13,7 +13,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.websockets import WebSocket, WebSocketDisconnect
 
 from src.config.app_config import get_settings
-from src.controllers import user_controller, bot_controller, admin_controller, guest_controller
+from src.controllers import user_controller, bot_controller, guest_controller
 from src.controllers.auth_controller import auth_router
 from src.controllers.bot_controller import bot_router
 from src.controllers.knowledge_controller import knowledge_router
@@ -38,7 +38,7 @@ import json
 
 
 @app.websocket("/ws/chats/{chat_id}/generate_stream")
-async def websocket_generate_stream2(chat_id: uuid.UUID, bot_id: uuid.UUID, websocket: WebSocket):
+async def websocket_generate_stream2(chat_id: uuid.UUID, websocket: WebSocket):
     await websocket.accept()
     while True:
         try:
@@ -99,23 +99,20 @@ async def websocket_generate_stream2(chat_id: uuid.UUID, bot_id: uuid.UUID, webs
     print("WebSocket connection closed")
 
 
-# Configure CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*", "http://localhost:3500"],
+    allow_origins=["*", "http://localhost:3001"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
+app.get("/health", status_code=200)(lambda: {"status": "ok"})
 api_router = APIRouter()
 api_router.include_router(auth_router, prefix='/auth', tags=["auth"])
 api_router.include_router(user_controller.user_router, prefix='/users', tags=["users"])
-api_router.include_router(admin_controller.admin_user_router, prefix='/admins/users', tags=["admins users"])
 api_router.include_router(bot_controller.chat_bot_router, prefix='/chats-bot', tags=["chats bots"])
 api_router.include_router(bot_controller.knowledge_bot_router, prefix='/knowledges-bot',
                           tags=["knowledges bots"])
-api_router.include_router(admin_controller.admin_bot_router, prefix='/admins/bots', tags=["admins bots"])
 api_router.include_router(query_router, prefix='/queries', tags=["chat queries"])
 api_router.include_router(bot_router, prefix='/bots', tags=["users bots"])
 api_router.include_router(knowledge_router, prefix='/knowledges', tags=["knowledges"])

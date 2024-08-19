@@ -58,7 +58,8 @@ class Settings(BaseSettings):
     MODEL_EMBEDDING_NAME: str = os.getenv('MODEL_EMBEDDING_NAME')
     GROQ_API_KEY: str = os.getenv('GROQ_API_KEY')
     MODEL_GENERATE_NAME: str = os.getenv('MODEL_GENERATE_NAME')
-
+    NGROK_API_KEY: str = os.getenv('NGROK_API_KEY')
+    FRONTEND_HOST: str = os.getenv('FRONTEND_HOST')
     class Config:
         env_file = env_path
         env_file_encoding = 'utf-8'

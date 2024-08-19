@@ -19,7 +19,7 @@ import time
 settings = get_settings()
 
 knowledge_router = APIRouter()
-MAX_FILE_SIZE = 1 * 1024 * 1024  # 10 MB
+MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
 ALLOWED_FILE_TYPES = {'pdf', 'docx', 'txt'}
 
 
@@ -124,7 +124,6 @@ async def toggle_file_status(file_id: UUID, knowledge_id: UUID, user: User = Dep
 @knowledge_router.delete('/{knowledge_id}/files/{file_id}', summary="Toggle file status", status_code=204)
 async def remove_file_to_knowledge(file_id: UUID, knowledge_id: UUID, user: User = Depends(get_current_user)):
     await KnowledgeService.remove_file_to_knowledge(knowledge_id, file_id, user)
-
 
 
 @knowledge_router.get('/{knowledge_id}/files/{file_id}', summary="Toggle file status", status_code=200,

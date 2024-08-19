@@ -113,6 +113,8 @@ class ChunkSchema(BaseModel):
     creation_time: Optional[datetime] = None
     rerank_score: Optional[float] = None
     chunk_uuid: Optional[UUID] = None
+    prev_uuid: Optional[List[UUID]] = None
+    next_uuid: Optional[List[UUID]] = None
 
 
 class File(BaseDocument):
@@ -142,7 +144,10 @@ class Bot(BaseDocument):
     avatar: Optional[str] = None
     description: Optional[str] = Field(max_length=500)
     is_active: Optional[bool] = Field(default=True)
-    persona_prompt: Optional[str] = Field(max_length=1000, default="hãy giới thiệu về bản thân bạn")
+    persona_prompt: Optional[str] = Field(max_length=1000,
+                                          default="bạn là một trợ lý ảo của bạn chuyên sử dụng các thông tin văn bản "
+                                                  "từ tài liệu của mình để trả lời câu hỏi của tôi một cách chính xác "
+                                                  "và ngắn gọn")
     is_memory_enabled: Optional[bool] = Field(default=False)
     owner: Optional[Link['User']]
     knowledges: Optional[List[Link['Knowledge']]] = Field(default_factory=list)
@@ -198,6 +203,7 @@ class Answer(BaseDocument):
 
 class Question(BaseDocument):
     question_id: UUID = Field(default_factory=uuid4, unique=True)
+    prompt: Optional[str] = Field(max_length=1000)
     content: Optional[str] = Field(max_length=1000)
     role: Optional[str] = Field(default="user")
     chunks: Optional[List[ChunkSchema]] = Field(default_factory=list)

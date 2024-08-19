@@ -158,30 +158,3 @@ class UserService:
         user_i = await user.save()
         return UserOut(**user_i.dict())
 
-    @staticmethod
-    async def get_all_users() -> List[UserOut]:
-        users = await User.find().to_list()
-        return [UserOut(**user.dict()) for user in users]
-
-    @staticmethod
-    async def search_users(
-            search_by: Optional[str],
-            search_value: Optional[str],
-            skip: int,
-            limit: int,
-            sort_by: str,
-            sort_order: str,
-    ) -> Tuple[List[UserOut], int]:
-        filter_query = {}
-        if search_by and search_value:
-            filter_query[search_by] = {"$regex": f".*{search_value}.*", "$options": "i"}
-
-        sort_direction = 1 if sort_order == "asc" else -1
-
-        total = await User.find(filter_query).count()
-
-        users = await User.find(filter_query).sort(
-            [(sort_by, sort_direction), ("_id", sort_direction)]
-        ).skip(skip).limit(limit).to_list()
-        users2 = [UserOut(**user.dict()) for user in users]
-        return users2, total

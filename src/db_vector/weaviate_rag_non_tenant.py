@@ -20,7 +20,7 @@ from weaviate.util import generate_uuid5
 
 from src.config.app_config import get_settings
 from src.db_vector.utils import generate_embeddings, get_recursive_token_chunk
-from src.dtos.schema_out.knowledge import ChunkOut
+from src.dtos.schema_out.knowledge import ChunkOut, Search
 from src.models.all_models import ChunkSchema
 from src.utils.app_util import count_token
 from src.utils.minio_util import delete_from_minio, delete_folder_from_minio
@@ -29,7 +29,8 @@ CUSTOM_PROPERTIES = [
     "chunks", "url", "chunk_id", "file_type",
     "knowledge_name", "file_name",
     "after_clean", "source",
-    "page_label"
+    "page_label",
+    "prev_uuid", "next_uuid"
 ]
 
 settings = get_settings()
@@ -122,6 +123,8 @@ def create_for_user(document):
                 Property(name="after_clean", data_type=DataType.TEXT),
                 Property(name="knowledge_name", data_type=DataType.TEXT, index_filterable=True),
                 Property(name="file_name", data_type=DataType.TEXT, index_filterable=True),
+                Property(name="prev_uuid", data_type=DataType.UUID_ARRAY),
+                Property(name="next_uuid", data_type=DataType.UUID_ARRAY),
             ],
             # generative_config=wvc.config.Configure.Generative.ollama(
             #     api_endpoint="http://host.docker.internal:11434",
@@ -176,22 +179,31 @@ def clean_input(input_text: str) -> str:
 
 
 def load_file(minio_client: Minio, file_type: str, path: str, temp_dir: str) -> List[LangchainDocument]:
-    file_path = os.path.join(temp_dir, os.path.basename(path))
-    minio_client.fget_object(settings.BUCKET_NAME, path, file_path)
+    try:
+        # Download the file from Minio
+        file_path = os.path.join(temp_dir, os.path.basename(path))
+        minio_client.fget_object(settings.BUCKET_NAME, path, file_path)
+        print(file_path)
 
-    loaders = {
-        "pdf": PyMuPDFLoader,
-        "txt": TextLoader,
-        "docx": Docx2txtLoader
-    }
+        # Determine the appropriate loader class based on the file type
+        loaders = {
+            "pdf": PyMuPDFLoader,
+            "txt": TextLoader,
+            "docx": Docx2txtLoader
+        }
+        loader_class = loaders.get(file_type)
+        if not loader_class:
+            raise ValueError(f"Invalid file type: {file_type}")
 
-    loader_class = loaders.get(file_type)
-    if not loader_class:
-        raise ValueError(f"Invalid file type: {file_type}")
-    if file_type == "txt":
-        return TextLoader(file_path, encoding='UTF-8').load()
-    else:
-        return loader_class(file_path).load()
+        # Load the file using the appropriate loader
+        if file_type == "txt":
+            return TextLoader(file_path, encoding='UTF-8').load()
+        else:
+            return loader_class(file_path).load()
+
+    except Exception as e:
+        print(f"An error occurred while loading the file: {str(e)}")
+        return []
 
 
 def clean_file_content(pages: int, index: int, page: LangchainDocument, file_path: str, url: str) -> LangchainDocument:
@@ -216,15 +228,17 @@ def load_and_clean_file(file_type: str, file_path: str, url: str):
     )
     with tempfile.TemporaryDirectory() as temp_dir:
         pages = load_file(minio_client, file_type, file_path, temp_dir)
-        pages_sorted = sorted(pages, key=lambda page: page.metadata.get('chunk_id'))
+        # print(pages)
+        page_len = len(pages)
+        # pages_sorted = sorted(pages, key=lambda page: page.metadata.get('chunk_id'))
         with ThreadPoolExecutor() as executor:
             futures = [
-                executor.submit(clean_file_content, len(pages_sorted), index, page, file_path, url)
-                for index, page in enumerate(pages_sorted)
+                executor.submit(clean_file_content, page_len, index, page, file_path, url)
+                for index, page in enumerate(pages)
             ]
             results = [future.result() for future in as_completed(futures)]
 
-    return get_recursive_token_chunk(chunk_size=250).split_documents(results), len(pages_sorted)
+    return get_recursive_token_chunk(chunk_size=512).split_documents(results), page_len
 
 
 def batch_import_knowledge_in_user(document_name: str, knowledge_name: str, file_type: str, file_path: str,
@@ -248,11 +262,32 @@ def batch_import_knowledge_in_user(document_name: str, knowledge_name: str, file
                 "file_name": file_name
             } for index, chunk in enumerate(chunks)
         ]
+        for data_row in data_rows:
+            uuid_ = generate_uuid5(data_row)
+            data_row["uuid"] = uuid_
+        for i, data_row in enumerate(data_rows):
+            # Lấy UUID của hàng trước
+            prev_uuids = []
+            if i > 0:
+                prev_uuids.append(data_rows[i - 1]["uuid"])
+                if i > 1:
+                    prev_uuids.append(data_rows[i - 2]["uuid"])
+
+            # Lấy UUID của hàng sau
+            next_uuids = []
+            if i < len(data_rows) - 1:
+                next_uuids.append(data_rows[i + 1]["uuid"])
+                if i < len(data_rows) - 2:
+                    next_uuids.append(data_rows[i + 2]["uuid"])
+
+            # Thêm vào data_row
+            data_row["prev_uuid"] = prev_uuids
+            data_row["next_uuid"] = next_uuids
 
         def add_object_to_batch(batch_run: Callable, data_row: dict) -> None:
             batch_run.add_object(
                 properties=data_row,
-                uuid=generate_uuid5(data_row),
+                uuid=data_row["uuid"],
                 vector=generate_embeddings(data_row["chunks"])
             )
 
@@ -266,19 +301,15 @@ def batch_import_knowledge_in_user(document_name: str, knowledge_name: str, file
 def search_in_knowledge_user(document_name: str, query: str, knowledge_name: List[str]) -> List[ChunkSchema]:
     if count_token(query) > 258:
         raise HTTPException(status_code=400, detail="Query too long")
-
     query_vector = generate_embeddings(query)
-
     with get_weaviate_client() as client:
         if not client.collections.exists(document_name):
             raise HTTPException(status_code=400, detail="Document not found")
-
         collection = client.collections.get(document_name)
-
         response = collection.query.hybrid(
             query=query,
-            alpha=0.8,
-            limit=30,
+            alpha=0.75,
+            limit=5,
             offset=0,
             fusion_type=wvc.query.HybridFusion.RELATIVE_SCORE,
             return_metadata=wvc.query.MetadataQuery(
@@ -286,26 +317,46 @@ def search_in_knowledge_user(document_name: str, query: str, knowledge_name: Lis
                 score=True, is_consistent=True, explain_score=True
             ),
             target_vector=document_name,
-            vector=wvc.query.HybridVector.near_vector(query_vector, distance=0.75),
+            vector=wvc.query.HybridVector.near_vector(query_vector, certainty=0.5),
             return_properties=CUSTOM_PROPERTIES,
             query_properties=["chunks"],
-            auto_limit=20,
-            filters=Filter.by_property("knowledge_name").contains_any(knowledge_name),
+            auto_limit=2,
+            filters=Filter.by_property("source").contains_any(knowledge_name),
         )
-
-        results = [
-            ChunkSchema(
+        results = []
+        for item in response.objects:
+            results.append(ChunkSchema(
                 **item.properties,
                 score=item.metadata.score,
                 explain_score=item.metadata.explain_score,
                 creation_time=item.metadata.creation_time,
                 chunk_uuid=item.uuid,
                 rerank_score=item.metadata.rerank_score
-            )
-            for item in response.objects
-        ]
-
-        return results
+            ))
+            prev_uuid = item.properties.get("prev_uuid")
+            next_uuid = item.properties.get("next_uuid")
+            if prev_uuid:
+                for prev in prev_uuid:
+                    prev_obj = read_object_by_id(document_name, prev)
+                    results.append(ChunkSchema(
+                        **prev_obj.properties,
+                        chunk_uuid=prev_obj.uuid,
+                    ))
+            if next_uuid:
+                for next in next_uuid:
+                    next_obj = read_object_by_id(document_name, next)
+                    results.append(ChunkSchema(
+                        **next_obj.properties,
+                        chunk_uuid=next_obj.uuid,
+                    ))
+        seen = set()
+        unique_chunks = []
+        for chunk in results:
+            identifier = (chunk.chunk_id, chunk.source)
+            if identifier not in seen:
+                seen.add(identifier)
+                unique_chunks.append(chunk)
+        return unique_chunks
 
 
 def get_all_chunk_in_file(doc_name, knowledge, source) -> list[ChunkOut]:
@@ -390,12 +441,6 @@ def get_all_knowledge_in_user(doc_name):
         return response.objects
 
 
-def get_all_user():
-    with get_weaviate_client() as client:
-        response = client.collections.list_all(simple=False)
-        print(response.keys())
-
-
 def aggregate_for_user(document_name):
     with get_weaviate_client() as client:
         collection = client.collections.get(document_name)
@@ -430,4 +475,4 @@ def read_object_by_id(docname, id):
                 # include_vector=True
             )
             # print(data_object)
-            return data_object.properties
+            return data_object

@@ -34,6 +34,8 @@ class ChunkOut(BaseModel):
     file_name: Optional[str] = None
     after_clean: Optional[str] = None
     chunks: Optional[str] = None
+    prev_uuid: Optional[List[UUID]] = None
+    next_uuid: Optional[List[UUID]] = None
 
 
 class KnowledgeListFileOut(BaseModel):
@@ -44,3 +46,7 @@ class KnowledgeListFileOut(BaseModel):
 class FileListChunkOut(BaseModel):
     file: Optional[FileOut]
     chunks: Optional[List[ChunkOut]]
+
+class Search(BaseModel):
+    knowledge_name: Optional[str]
+    file_name: Optional[str]

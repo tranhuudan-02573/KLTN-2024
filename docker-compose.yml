@@ -1,6 +1,19 @@
 ﻿version: '3.8'
 
 services:
+  frontend:
+    container_name: frontend
+    build:
+      context: .
+      dockerfile: Dockerfile2
+    image: kltn-frontend
+    volumes:
+      - './chat_text_web_demo:/app'
+      - '/app/node_modules'
+    ports:
+      - 3001:3001
+    networks:
+      - huudan
   fastapi-service:
     build:
       context: .
@@ -17,6 +30,11 @@ services:
         condition: service_healthy
       weaviate:
         condition: service_healthy
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8068/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
     ports:
       - "8068:8068"
     env_file:
@@ -25,9 +43,10 @@ services:
       - huudan
     volumes:
       - ".:/usr/srv"
+    
   minio:
     container_name: minio
-    restart: on-failure
+    restart: unless-stopped
     image: minio/minio
     volumes:
       - minio-data:/data
@@ -84,7 +103,7 @@ services:
   redis:
     image: redis:latest
     container_name: redis
-    restart: on-failure
+    restart: unless-stopped
     depends_on:
       - redis-insight
     ports:
@@ -102,7 +121,7 @@ services:
   
   redis-insight:
     image: redis/redisinsight:latest
-    restart: on-failure
+    restart: unless-stopped
     ports:
       - "5540:5540"
     volumes:
@@ -126,7 +145,7 @@ services:
     ports:
       - "8080:8080"
       - "50051:50051"
-    restart: on-failure
+    restart: unless-stopped
     environment:
       LOG_LEVEL: debug
       LIMIT_RESOURCES: 'true'
@@ -166,8 +185,14 @@ services:
     ports:
       - "9090:9090"
     depends_on:
-      - weaviate
-      - redis-exporter
+      weaviate:
+        condition: service_healthy
+      redis-exporter:
+        condition: service_started
+      fastapi-service:
+        condition: service_started
+      mongodb_exporter:
+        condition: service_started
     networks:
       - huudan
   grafana:
@@ -191,7 +216,7 @@ services:
   mongodb_exporter:
     image: percona/mongodb_exporter:0.40
     container_name: mongodb_exporter
-    restart: always
+    restart: unless-stopped
     ports:
       - "9216:9216"
     command: >
@@ -207,10 +232,13 @@ services:
     environment:
       WAIT_HOSTS: mongodb:27017
       MONGODB_URI: $MONGO_CONNECTION_STRING
+    depends_on:
+      mongodb:
+        condition: service_healthy
   mongodb:
     container_name: mongodb
     image: mongo:latest
-    restart: on-failure
+    restart: unless-stopped
     ports:
       - "27017:27017"
     volumes:

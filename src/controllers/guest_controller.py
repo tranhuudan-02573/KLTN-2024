@@ -1,4 +1,5 @@
 from typing import Any
+from urllib.parse import urlencode
 
 import jwt
 from fastapi import APIRouter, Depends, HTTPException, status, Body, BackgroundTasks
@@ -95,7 +96,15 @@ async def refresh_token(refresh_token: RefreshTokenPayload):
 @guest_router.post('/resend-verify-token', summary="Resend verification token", response_class=JSONResponse)
 async def resend_verify_token(data: ResendVerifyToken, background_tasks: BackgroundTasks):
     user = await AuthService.resend_verify_token(data.email)
-    activate_url = f"{settings.SERVER_IP}:{settings.FRONTEND_PORT}/guest/verify-token?token={user['verification_token']}&email={user['email']}"
+    query_params = {
+        'token': user['verification_token'],
+        'email': user['email']
+    }
+
+    # Mã hóa các tham số query và gắn vào URL
+    activate_url = f"{settings.FRONTEND_HOST}/guest/verify-token?{urlencode(query_params)}"
+
+    # Truyền URL vào email data
     email_data = {
         'app_name': settings.APP_NAME,
         "name": user['email'],
@@ -123,7 +132,7 @@ async def accept_forgot_password(data: AcceptResetTokenPayload):
 @guest_router.post('/forgot-pass', summary="Request password reset", response_class=JSONResponse)
 async def forgot_password(email: EmailStr, background_tasks: BackgroundTasks):
     user = await AuthService.forgot_pass(email)
-    activate_url = f"{settings.SERVER_IP}:{settings.FRONTEND_PORT}/accept-forgot-password?email={user['email']}"
+    activate_url = f"{settings.FRONTEND_HOST}/accept-forgot-password?email={user['email']}"
     email_data = {
         'app_name': settings.APP_NAME,
         'token': user['token'],

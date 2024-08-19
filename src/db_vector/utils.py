@@ -11,7 +11,7 @@ from itertools import cycle
 api_keys = ["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", "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",
             "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", "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",
             "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",
-            "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"]
+            "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", "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"]
 api_key_cycle = cycle(api_keys)
 import time
 
