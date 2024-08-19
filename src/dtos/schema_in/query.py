@@ -23,12 +23,11 @@ class ChunkPayload(BaseModel):
     chunk_id: float
     file_name: str
     chunks: str
-    score: float
 
     def to_custom_string(self) -> str:
         return (
             f"chunk {self.chunk_id} ở trang {self.page_label} của file {self.file_name} "
-            f"có số điểm {self.score} với nội dung là {self.chunks}"
+            f"với nội dung là {self.chunks}"
         )
 
 

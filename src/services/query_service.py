@@ -25,10 +25,11 @@ class QueryService:
             raise HTTPException(status_code=404, detail="Bot has no knowledge")
         knowledge_ids = [k.knowledge_id for k in bot.knowledges]
         knowledge_names = await KnowledgeService.get_knowledges_by_ids(knowledge_ids)
-        chunks = search_in_knowledge_user(user.username, bot.persona_prompt + " " + queryCreate.query, knowledge_names)
+        chunks = search_in_knowledge_user(user.username, queryCreate.query, knowledge_names)
         context = [ChunkPayload(**chunk.dict()) for chunk in chunks]
         qa = Question(
             content=queryCreate.query,
+            prompt=bot.persona_prompt,
             role="user",
             chunks=chunks
         )
@@ -46,28 +47,6 @@ class QueryService:
             user_id=user.user_id,
             query_id=qs.query_id,
             query=queryCreate.query,
-            context=context,
-            conversation=conversation
-        )
-        return rs
-
-    @staticmethod
-    async def update_query_for_chat(bot_id: UUID, user: User, chat_id: UUID, query_id: UUID,
-                                    queryUpdate: QueryUpdate) -> GeneratePayload:
-        query = await QueryService.get_query_for_chat(bot_id, user, chat_id, query_id)
-        query.question.content = queryUpdate.query
-        await query.save()
-        kn = await BotService.get_all_knowledge_in_bots(bot_id, user.id)
-        knowledge_ids = [k.knowledge_id for k in kn.knowledges]
-        knowledge_names = await KnowledgeService.get_knowledges_by_ids(knowledge_ids)
-        chunks = search_in_knowledge_user(user.username, queryUpdate.query, knowledge_names)
-        update_user_history_chat(str(user.user_id), str(chat_id), query.query_id, queryUpdate.query, "user")
-        conversation = convert_chat_history_to_items(str(user.user_id), str(chat_id))
-        context = [ChunkPayload(**chunk.dict()) for chunk in chunks]
-        rs = GeneratePayload(
-            user_id=user.user_id,
-            query_id=query.query_id,
-            query=queryUpdate.query,
             context=context,
             conversation=conversation
         )

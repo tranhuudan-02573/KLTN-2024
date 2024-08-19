@@ -19,11 +19,6 @@ async def create_query_for_chat(bot_id: UUID, chat_id: UUID, query: QueryCreate,
     return await QueryService.create_query_for_chat(bot_id, user, chat_id, query)
 
 
-@query_router.put("/bots/{bot_id}/chats/{chat_id}/query/{query_id}", status_code=200, response_model=GeneratePayload)
-async def update_query_for_chat(bot_id: UUID, chat_id: UUID, query_id: UUID, query: QueryUpdate,
-                                user: User = Depends(get_current_user)) -> GeneratePayload:
-    return await QueryService.update_query_for_chat(bot_id, user, chat_id, query_id, query)
-
 
 @query_router.delete("/bots/{bot_id}/chats/{chat_id}/query/{query_id}", status_code=204)
 async def delete_for_chat(bot_id: UUID, chat_id: UUID, query_id: UUID,

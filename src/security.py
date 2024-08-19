@@ -10,7 +10,7 @@ from src.services.jwt_service import verify_token
 
 settings = get_settings()
 reuseable_oauth = OAuth2PasswordBearer(
-    tokenUrl=f"{settings.API_V1_STR}/auth/login",
+    tokenUrl="/guest/login",
     scheme_name="JWT"
 )
 

@@ -50,6 +50,7 @@ class KnowledgeService:
         if not knowledge:
             raise HTTPException(status_code=404, detail="Knowledge not found")
         await knowledge.fetch_link(Knowledge.files)
+        print(generate_key_knowledge(knowledge.knowledge_id))
         return KnowledgeListFileOut(
             knowledge=KnowledgeOut(
                 knowledge_id=knowledge.knowledge_id,
@@ -149,7 +150,7 @@ class KnowledgeService:
             raise HTTPException(status_code=404, detail="File not found")
         rs = get_all_chunk_in_file(user.username, generate_key_knowledge(knowledge.knowledge_id),
                                    get_key_name_minio(file.url))
-
+        
         return FileListChunkOut(
             file=FileOut(
                 file_id=file.file_id,
@@ -170,5 +171,7 @@ class KnowledgeService:
     @staticmethod
     async def get_knowledges_by_ids(knowledge_ids: list[UUID]) -> list[str]:
         knowledges = await Knowledge.find(In(Knowledge.knowledge_id, knowledge_ids)).to_list()
-        knowledge_names = [generate_key_knowledge(k.knowledge_id) for k in knowledges]
+        knowledge_names1 = [k.id for k in knowledges]
+        files = await File.find(In(File.knowledge.id, knowledge_names1)).to_list()
+        knowledge_names = [k.name for k in files]
         return knowledge_names

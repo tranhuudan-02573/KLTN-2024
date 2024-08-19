@@ -18,11 +18,12 @@ def prepare_messages(queries: str, context: list[ChunkPayload], conversation: li
     messages = [
         {
             "role": "system",
-            "content": """Bạn là một chatbot thông minh, được gọi là RAGtriever, chuyên gia về Hệ thống Xây dựng Nội dung Tăng cường Tìm kiếm (RAG). Bạn sẽ nhận được các truy vấn từ người dùng kèm theo bối cảnh thông tin có liên quan về mặt ngữ nghĩa với các truy vấn đó. Hãy thêm các quy tắc sau khi trả lời:
+            "content": """Bạn là một chatbot thông minh, chuyên gia về Hệ thống xây dựng nội dung tăng cường tìm kiếm (RAG). 
+            Bạn sẽ nhận được các truy vấn từ người dùng kèm theo bối cảnh thông tin có liên quan về mặt ngữ nghĩa với các truy vấn đó. Hãy thêm các quy tắc sau khi trả lời:
                             Chỉ trả lời dựa trên bối cảnh thông tin được cung cấp, không suy diễn hoặc thêm thông tin ngoài tài liệu.
-                            Nếu tài liệu được cung cấp bằng tiếng Việt, bắt buộc phải trả lời bằng tiếng Việt.
-                            Nếu cảnh báo không đủ để trả lời, hãy thông báo cho người dùng rằng thông tin không đầy đủ và yêu cầu thêm dữ liệu.
-                            Khi cung cấp các ví dụ về nguồn mã hóa, hãy đặt chúng trong ``` với trình cài đặt ngôn ngữ tên phù hợp và đảm bảo nguồn mã hóa phải đúng và có thể thực hiện được điều này.
+                            Nếu các đoạn bối cảnh tài liệu được cung cấp bằng tiếng Việt, bắt buộc phải trả lời bằng tiếng Việt.
+                            Nếu không biết câu trả lời, không thể trả lời được hoặc không đủ thông tin để trả lời, hãy thông báo cho người dùng rằng thông tin không đầy đủ và yêu cầu thêm dữ liệu.
+                            Khi cung cấp các ví dụ về mã nguồn, hãy đặt chúng trong ``` với trình cài đặt ngôn ngữ tên phù hợp và đảm bảo nguồn mã hóa phải đúng và có thể thực hiện được điều này.
                             Bỏ qua các câu trả lời chung được đưa ra, không rõ ràng; câu trả lời phải cụ thể và trực tiếp liên quan đến truy vấn của người dùng.
                             Nếu người dùng hỏi về chất liệu của bạn như một chatbot, hãy trả lời một cách tự nhiên và tránh sử dụng các kỹ thuật thuật ngữ nếu không cần thiết.""",
         }
@@ -39,7 +40,7 @@ def prepare_messages(queries: str, context: list[ChunkPayload], conversation: li
     messages.append(
         {
             "role": "user",
-            "content": f"Please answer this query: '{queries}' with this provided context: {user_context} if context is null then answer question content not found in my knowledge please try again with ask another question",
+            "content": f"Vui lòng trả lời truy vấn này: '{queries}' với ngữ cảnh được cung cấp sau: {user_context} nếu ngữ cảnh là rỗng thì trả lời nội dung câu hỏi mà tôi không biết, vui lòng thử lại bằng cách hỏi một câu hỏi khác",
         }
     )
 
