@@ -37,8 +37,8 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()) -> Any:
             detail="Account is disabled. Please contact support for more information."
         )
 
-    return TokenOut(access_token=create_access_token(user.user_id, user.role),
-                    refresh_token=create_refresh_token(user.user_id, user.role),
+    return TokenOut(access_token=create_access_token(user.user_id),
+                    refresh_token=create_refresh_token(user.user_id),
                     token_type="bearer", expires_access_token_minutes_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES,
                     expires_refresh_token_minutes_in=settings.REFRESH_TOKEN_EXPIRE_MINUTES)
 
@@ -87,8 +87,8 @@ async def refresh_token(refresh_token: RefreshTokenPayload):
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Account is disabled. Please contact support for more information."
         )
-    return TokenOut(access_token=create_access_token(user.user_id, user.role),
-                    refresh_token=create_refresh_token(user.user_id, user.role),
+    return TokenOut(access_token=create_access_token(user.user_id),
+                    refresh_token=create_refresh_token(user.user_id),
                     token_type="bearer", expires_access_token_minutes_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES,
                     expires_refresh_token_minutes_in=settings.REFRESH_TOKEN_EXPIRE_MINUTES)
 

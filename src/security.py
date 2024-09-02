@@ -15,9 +15,9 @@ reuseable_oauth = OAuth2PasswordBearer(
 )
 
 
-async def verify_and_get_payload(admin, token):
+async def verify_and_get_payload(token):
     try:
-        payload = verify_token(token, admin, is_access_token=True)
+        payload = verify_token(token, is_access_token=True)
         return TokenPayload(**payload)
     except jwt.ExpiredSignatureError:
         raise HTTPException(
@@ -31,7 +31,8 @@ async def verify_and_get_payload(admin, token):
             detail="Invalid token",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    except ValidationError:
+    except ValidationError as e:
+        print(e.json())
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="Invalid token payload",
@@ -45,40 +46,14 @@ async def verify_and_get_payload(admin, token):
         )
 
 
-async def get_current_user_role(admin, token: str = Depends(reuseable_oauth)) -> User:
-    token_data = await verify_and_get_payload(admin, token)
+async def get_current_user(token: str = Depends(reuseable_oauth)) -> User:
+    token_data = await verify_and_get_payload(token)
+    print(token_data)
     user = await get_user_by_id(token_data.sub)
+    print(user)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Could not find user",
         )
     return user
-
-
-async def get_current_token_role(admin, token: str = Depends(reuseable_oauth)) -> TokenPayload:
-    return await verify_and_get_payload(admin, token)
-
-
-async def get_current_user_normal(token: str = Depends(reuseable_oauth)) -> User:
-    return await get_current_user_role(False, token)
-
-
-async def get_current_user(token: str = Depends(reuseable_oauth)) -> User:
-    return await get_current_user_role(None, token)
-
-
-async def get_current_user_admin(token: str = Depends(reuseable_oauth)) -> User:
-    return await get_current_user_role(True, token)
-
-
-async def get_current_token_normal(token: str = Depends(reuseable_oauth)) -> TokenPayload:
-    return await get_current_token_role(False, token)
-
-
-async def get_current_token(token: str = Depends(reuseable_oauth)) -> TokenPayload:
-    return await get_current_token_role(None, token)
-
-
-async def get_current_token_admin(token: str = Depends(reuseable_oauth)) -> TokenPayload:
-    return await get_current_token_role(True, token)

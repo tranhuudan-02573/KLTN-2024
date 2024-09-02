@@ -11,7 +11,7 @@ from src.dtos.schema_in.knowledge import KnowledgeCreateForBot
 from src.dtos.schema_out.bot import BotKnowledgeChatOut, BotOut, BotChatOut, ChatListQueryOut, BotKnowledgeOut
 from src.dtos.schema_out.chat import ChatOut
 from src.models.all_models import User
-from src.security import get_current_user, get_current_user_admin
+from src.security import get_current_user
 from src.services.bot_service import BotService
 from src.services.chat_service import ChatService
 from src.services.query_service import QueryService

@@ -1,4 +1,3 @@
-from typing import Optional
 from uuid import UUID
 
 from pydantic import BaseModel, EmailStr, Field
@@ -22,7 +21,6 @@ class AcceptResetTokenPayload(PasswordMixin):
 class TokenPayload(BaseModel):
     sub: UUID
     exp: int
-    role: str
 
 
 class RefreshTokenPayload(BaseModel):

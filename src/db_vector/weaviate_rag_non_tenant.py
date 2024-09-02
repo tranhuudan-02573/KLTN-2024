@@ -10,7 +10,6 @@ from fastapi import HTTPException
 from langchain.docstore.document import Document as LangchainDocument
 from langchain_community.document_loaders import PyMuPDFLoader, TextLoader, Docx2txtLoader
 from minio import Minio
-from weaviate.auth import Auth
 from weaviate.classes.config import Property, DataType
 from weaviate.classes.query import Filter
 from weaviate.classes.query import Sort
@@ -20,7 +19,7 @@ from weaviate.util import generate_uuid5
 
 from src.config.app_config import get_settings
 from src.db_vector.utils import generate_embeddings, get_recursive_token_chunk
-from src.dtos.schema_out.knowledge import ChunkOut, Search
+from src.dtos.schema_out.knowledge import ChunkOut
 from src.models.all_models import ChunkSchema
 from src.utils.app_util import count_token
 from src.utils.minio_util import delete_from_minio, delete_folder_from_minio
@@ -38,14 +37,13 @@ import tempfile
 
 from weaviate.config import ConnectionConfig
 
-connection_config = ConnectionConfig(
-    session_pool_connections=30,  # Tăng số lượng kết nối mặc định
-    session_pool_maxsize=150,  # Tăng số lượng kết nối tối đa
-    session_pool_max_retries=5  # Tăng số lần thử lại
-)
-
 
 def get_weaviate_client():
+    connection_config = ConnectionConfig(
+        session_pool_connections=30,
+        session_pool_maxsize=150,
+        session_pool_max_retries=5
+    )
     client = weaviate.connect_to_local(
         host=settings.WEAVIATE_HOST,
         headers={
@@ -61,7 +59,6 @@ def get_weaviate_client():
     return client
 
 
-# 
 # def get_weaviate_client():
 #     weaviate_client = weaviate.connect_to_weaviate_cloud(
 #         cluster_url=settings.WEAVIATE_CLUSTER_URL,
@@ -83,6 +80,19 @@ def create_for_user(document):
     with get_weaviate_client() as client:
         collection = client.collections.create(
             name=document,
+            properties=[
+                Property(name="chunks", data_type=DataType.TEXT, index_searchable=True),
+                Property(name="page_label", data_type=DataType.TEXT),
+                Property(name="url", data_type=DataType.TEXT),
+                Property(name="source", data_type=DataType.TEXT, index_filterable=True),
+                Property(name="chunk_id", data_type=DataType.NUMBER),
+                Property(name="file_type", data_type=DataType.TEXT, index_filterable=True),
+                Property(name="after_clean", data_type=DataType.TEXT),
+                Property(name="knowledge_name", data_type=DataType.TEXT, index_filterable=True),
+                Property(name="file_name", data_type=DataType.TEXT, index_filterable=True),
+                Property(name="prev_uuid", data_type=DataType.UUID_ARRAY),
+                Property(name="next_uuid", data_type=DataType.UUID_ARRAY),
+            ],
             vector_index_config=wvc.config.Configure.VectorIndex.dynamic(
                 distance_metric=weaviate.classes.config.VectorDistances.COSINE,
                 threshold=25000,
@@ -113,34 +123,6 @@ def create_for_user(document):
                 bm25_k1=1.25,
                 bm25_b=0.75,
             ),
-            properties=[
-                Property(name="chunks", data_type=DataType.TEXT, index_searchable=True),
-                Property(name="page_label", data_type=DataType.TEXT),
-                Property(name="url", data_type=DataType.TEXT),
-                Property(name="source", data_type=DataType.TEXT, index_filterable=True),
-                Property(name="chunk_id", data_type=DataType.NUMBER),
-                Property(name="file_type", data_type=DataType.TEXT, index_filterable=True),
-                Property(name="after_clean", data_type=DataType.TEXT),
-                Property(name="knowledge_name", data_type=DataType.TEXT, index_filterable=True),
-                Property(name="file_name", data_type=DataType.TEXT, index_filterable=True),
-                Property(name="prev_uuid", data_type=DataType.UUID_ARRAY),
-                Property(name="next_uuid", data_type=DataType.UUID_ARRAY),
-            ],
-            # generative_config=wvc.config.Configure.Generative.ollama(
-            #     api_endpoint="http://host.docker.internal:11434",
-            #     model="llama3"
-            # ),
-            # generative_config=wvc.config.Configure.Generative.openai(
-            #     model="gpt-3.5-turbo",
-            #     max_tokens="",
-            #     temperature=1,
-            #     frequency_penalty=1,
-            #     presence_penalty=1,
-            #     top_p=1,
-            # ),
-            # reranker_config=wvc.config.Configure.Reranker.cohere(
-            #     model="rerank-multilingual-v3.0"
-            # ) ,
             reranker_config=wvc.config.Configure.Reranker.transformers(
             ),
             vectorizer_config=wvc.config.Configure.Vectorizer.text2vec_huggingface(
@@ -154,24 +136,18 @@ def create_for_user(document):
         return collection
 
 
-compiled_patterns = [
-
-    (re.compile(r'\n\s*\n'), '\n'),
-    (re.compile(r'[ ]+'), ' '),
-    (re.compile(r'\.{2,}'), '.'),
-    (re.compile(r',{2,}'), ','),
-    (re.compile(r'-{2,}'), '-'),
-    (re.compile(r'_{2,}'), '_'),
-    (re.compile(r'!{2,}'), '!'),
-    (re.compile(r'\?{2,}'), '?'),
-    (re.compile(r'(\d)([A-Za-z])'), r'\1 \2'),
-    (re.compile(r'([A-Za-z])(\d)'), r'\1 \2'),
-    (re.compile(r'[^\w\s\[\]\(\)\$\\.\n\/:#<>{},_"!@\\-\\*=\\]'), ''),
-    (re.compile(r'\s+'), ' ')
-]
-
-
 def clean_input(input_text: str) -> str:
+    compiled_patterns = [
+        (re.compile(r'[ ]+'), ' '),
+        (re.compile(r'\.{2,}'), '.'),
+        (re.compile(r',{2,}'), ','),
+        (re.compile(r'-{2,}'), '-'),
+        (re.compile(r'_{2,}'), '_'),
+        (re.compile(r'!{2,}'), '!'),
+        (re.compile(r'\?{2,}'), '?'),
+        (re.compile(r'[^\w\s\[\]\(\)\$\\.\n\/:#<>{},_"!@\\-\\*=\\]'), ''),
+        (re.compile(r'[^\w\s\[\]\(\)\$\\.\n\/:#<>{},_"!@\\-\\*=\\àáâãäåæçèéêëìíîïðñòóôõöøùúûüýÿ]+'), ''),
+    ]
     text = input_text
     for pattern, replacement in compiled_patterns:
         text = pattern.sub(replacement, text)
@@ -180,12 +156,8 @@ def clean_input(input_text: str) -> str:
 
 def load_file(minio_client: Minio, file_type: str, path: str, temp_dir: str) -> List[LangchainDocument]:
     try:
-        # Download the file from Minio
         file_path = os.path.join(temp_dir, os.path.basename(path))
         minio_client.fget_object(settings.BUCKET_NAME, path, file_path)
-        print(file_path)
-
-        # Determine the appropriate loader class based on the file type
         loaders = {
             "pdf": PyMuPDFLoader,
             "txt": TextLoader,
@@ -194,8 +166,6 @@ def load_file(minio_client: Minio, file_type: str, path: str, temp_dir: str) -> 
         loader_class = loaders.get(file_type)
         if not loader_class:
             raise ValueError(f"Invalid file type: {file_type}")
-
-        # Load the file using the appropriate loader
         if file_type == "txt":
             return TextLoader(file_path, encoding='UTF-8').load()
         else:
@@ -228,17 +198,14 @@ def load_and_clean_file(file_type: str, file_path: str, url: str):
     )
     with tempfile.TemporaryDirectory() as temp_dir:
         pages = load_file(minio_client, file_type, file_path, temp_dir)
-        # print(pages)
         page_len = len(pages)
-        # pages_sorted = sorted(pages, key=lambda page: page.metadata.get('chunk_id'))
         with ThreadPoolExecutor() as executor:
             futures = [
                 executor.submit(clean_file_content, page_len, index, page, file_path, url)
                 for index, page in enumerate(pages)
             ]
             results = [future.result() for future in as_completed(futures)]
-
-    return get_recursive_token_chunk(chunk_size=512).split_documents(results), page_len
+    return get_recursive_token_chunk().split_documents(results), page_len
 
 
 def batch_import_knowledge_in_user(document_name: str, knowledge_name: str, file_type: str, file_path: str,
@@ -266,21 +233,12 @@ def batch_import_knowledge_in_user(document_name: str, knowledge_name: str, file
             uuid_ = generate_uuid5(data_row)
             data_row["uuid"] = uuid_
         for i, data_row in enumerate(data_rows):
-            # Lấy UUID của hàng trước
             prev_uuids = []
             if i > 0:
                 prev_uuids.append(data_rows[i - 1]["uuid"])
-                if i > 1:
-                    prev_uuids.append(data_rows[i - 2]["uuid"])
-
-            # Lấy UUID của hàng sau
             next_uuids = []
             if i < len(data_rows) - 1:
                 next_uuids.append(data_rows[i + 1]["uuid"])
-                if i < len(data_rows) - 2:
-                    next_uuids.append(data_rows[i + 2]["uuid"])
-
-            # Thêm vào data_row
             data_row["prev_uuid"] = prev_uuids
             data_row["next_uuid"] = next_uuids
 
@@ -299,7 +257,7 @@ def batch_import_knowledge_in_user(document_name: str, knowledge_name: str, file
 
 
 def search_in_knowledge_user(document_name: str, query: str, knowledge_name: List[str]) -> List[ChunkSchema]:
-    if count_token(query) > 258:
+    if count_token(query) > 256:
         raise HTTPException(status_code=400, detail="Query too long")
     query_vector = generate_embeddings(query)
     with get_weaviate_client() as client:

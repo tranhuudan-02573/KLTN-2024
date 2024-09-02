@@ -4,6 +4,7 @@ import secrets
 import time
 
 import tiktoken
+from transformers import AutoTokenizer
 
 from src.config.app_config import get_settings
 
@@ -24,9 +25,14 @@ def strip_non_letters(s: str) -> str:
     return re.sub(r"[^a-zA-Z0-9]", "_", s)
 
 
-def count_token(string: str) -> int:
-    encoding = tiktoken.encoding_for_model("gpt-3.5-turbo")
-    return len(encoding.encode(string))
+def count_token(text: str) -> int:
+    try:
+        tokenizer = AutoTokenizer.from_pretrained(settings.MODEL_EMBEDDING_NAME)
+        tokens = tokenizer.encode(text, add_special_tokens=True)
+        return len(tokens)
+    except Exception as e:
+        print(f"An error occurred while counting tokens: {str(e)}")
+        return 0
 
 
 def unique_string(byte: int = 8) -> str:

@@ -47,6 +47,7 @@ class FileListChunkOut(BaseModel):
     file: Optional[FileOut]
     chunks: Optional[List[ChunkOut]]
 
+
 class Search(BaseModel):
     knowledge_name: Optional[str]
     file_name: Optional[str]

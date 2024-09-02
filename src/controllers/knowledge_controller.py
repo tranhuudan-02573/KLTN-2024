@@ -19,7 +19,7 @@ import time
 settings = get_settings()
 
 knowledge_router = APIRouter()
-MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
+MAX_FILE_SIZE = 30 * 1024 * 1024  # 10 MB
 ALLOWED_FILE_TYPES = {'pdf', 'docx', 'txt'}
 
 

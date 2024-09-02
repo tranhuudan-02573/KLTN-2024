@@ -25,8 +25,6 @@ from src.models.all_models import User
 from src.utils.minio_util import create_bucket_if_not_exist
 from prometheus_fastapi_instrumentator import Instrumentator
 
-from src.utils.redis_util import set_user_history_chat
-
 # Initialize FastAPI application and settings
 settings = get_settings()
 app = FastAPI(
@@ -54,11 +52,10 @@ async def websocket_generate_stream2(chat_id: uuid.UUID, websocket: WebSocket):
                 user_id=user_id,
                 query_id=query_id,
                 query=payload1['query'],
-                context=payload1['context'],
-                conversation=payload1['conversation']
+                context=payload1['context']
             )
             full_text = ""
-            async for chunk in generate_stream(payload.query, payload.context, payload.conversation):
+            async for chunk in generate_stream(payload.query, payload.context):
                 print(chunk)
                 if chunk.choices[0].finish_reason == "stop":
                     await websocket.send_json({
@@ -76,7 +73,6 @@ async def websocket_generate_stream2(chat_id: uuid.UUID, websocket: WebSocket):
                     insert_ = await answer.insert()
                     query.answer = insert_
                     await query.save()
-                    set_user_history_chat(str(user_id), str(chat_id), full_text, "assistant", query_id)
                 else:
                     full_text += chunk.choices[0].delta.content
                     await websocket.send_json({
@@ -101,7 +97,7 @@ async def websocket_generate_stream2(chat_id: uuid.UUID, websocket: WebSocket):
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*", "http://localhost:3001"],
+    allow_origins=["*", "http://localhost:3001", "https://*.ngrok.io"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

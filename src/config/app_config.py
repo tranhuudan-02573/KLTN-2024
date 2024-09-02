@@ -60,6 +60,8 @@ class Settings(BaseSettings):
     MODEL_GENERATE_NAME: str = os.getenv('MODEL_GENERATE_NAME')
     NGROK_API_KEY: str = os.getenv('NGROK_API_KEY')
     FRONTEND_HOST: str = os.getenv('FRONTEND_HOST')
+    MODEL_EMBEDDING_PATH: str = os.getenv('MODEL_EMBEDDING_PATH')
+
     class Config:
         env_file = env_path
         env_file_encoding = 'utf-8'

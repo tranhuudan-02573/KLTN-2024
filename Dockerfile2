@@ -1,0 +1,19 @@
+# Sử dụng node image chính thức làm base image
+FROM node:14-alpine
+
+# Thiết lập thư mục làm việc trong container
+WORKDIR /app
+
+# Sao chép package.json và package-lock.json (nếu có)
+COPY ./chat_text_web_demo/package*.json ./
+
+# Cài đặt dependencies
+RUN npm install
+
+# Sao chép toàn bộ source code của ứng dụng
+COPY ./chat_text_web_demo .
+
+# Build ứng dụng
+RUN npm run build
+
+CMD ["npm","start"]

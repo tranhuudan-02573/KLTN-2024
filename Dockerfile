@@ -1,27 +1,33 @@
 # Use an official Python runtime as a parent image
-FROM python:3.11
+FROM python:3.11-slim
 
 # Set the working directory in the container
 WORKDIR /usr/srv
 
 # Set environment variables
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
 
-# Install system dependencies
+# Install system dependencies and Python packages
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     libpq-dev \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && pip install --no-cache-dir --upgrade pip
 
-# Install Python dependencies
+# Copy and install Python dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the current directory contents into the container at /usr/srv
-COPY . .
+# Copy the model and source code
+COPY ./final-model-v1 ./final-model-v1
+COPY ./src ./src
+COPY ./app.py .
 
-# Make port 8000 available to the world outside this container
+# Add the current directory to PYTHONPATH
+ENV PYTHONPATH=/usr/srv
+
+# Make port 8068 available to the world outside this container
 EXPOSE 8068
 
 # Run the application

@@ -2,36 +2,44 @@ import asyncio
 import random
 
 from groq import AsyncGroq
-from openai import AsyncOpenAI
 
 from src.config.app_config import get_settings
-from src.dtos.schema_in.query import ChunkPayload, ConversationItem
+from src.dtos.schema_in.query import ChunkPayload
 
 settings = get_settings()
 from functools import wraps
 
-client2 = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
 client = AsyncGroq(api_key=settings.GROQ_API_KEY)
 
 
-def prepare_messages(queries: str, context: list[ChunkPayload], conversation: list[ConversationItem]):
+def prepare_messages(queries: str, context: list[ChunkPayload]):
     messages = [
         {
             "role": "system",
-            "content": """Bạn là một chatbot thông minh, chuyên gia về Hệ thống xây dựng nội dung tăng cường tìm kiếm (RAG). 
-            Bạn sẽ nhận được các truy vấn từ người dùng kèm theo bối cảnh thông tin có liên quan về mặt ngữ nghĩa với các truy vấn đó. Hãy thêm các quy tắc sau khi trả lời:
-                            Chỉ trả lời dựa trên bối cảnh thông tin được cung cấp, không suy diễn hoặc thêm thông tin ngoài tài liệu.
-                            Nếu các đoạn bối cảnh tài liệu được cung cấp bằng tiếng Việt, bắt buộc phải trả lời bằng tiếng Việt.
-                            Nếu không biết câu trả lời, không thể trả lời được hoặc không đủ thông tin để trả lời, hãy thông báo cho người dùng rằng thông tin không đầy đủ và yêu cầu thêm dữ liệu.
-                            Khi cung cấp các ví dụ về mã nguồn, hãy đặt chúng trong ``` với trình cài đặt ngôn ngữ tên phù hợp và đảm bảo nguồn mã hóa phải đúng và có thể thực hiện được điều này.
-                            Bỏ qua các câu trả lời chung được đưa ra, không rõ ràng; câu trả lời phải cụ thể và trực tiếp liên quan đến truy vấn của người dùng.
-                            Nếu người dùng hỏi về chất liệu của bạn như một chatbot, hãy trả lời một cách tự nhiên và tránh sử dụng các kỹ thuật thuật ngữ nếu không cần thiết.""",
+            "content": """Bạn là một trợ lý AI chuyên nghiệp, được thiết kế đặc biệt cho hệ thống Truy xuất Thông tin 
+            Tăng cường (RAG) bằng tiếng Việt. Nhiệm vụ của bạn là cung cấp câu trả lời chính xác, ngắn gọn và hữu ích 
+            cho người dùng dựa trên ngữ cảnh được cung cấp. Tuân thủ các nguyên tắc sau:
+
+1. Trả lời chỉ sử dụng thông tin từ ngữ cảnh được cung cấp. Không thêm thông tin ngoài tài liệu hoặc suy diễn.
+
+2. Sử dụng tiếng Việt chuẩn mực, rõ ràng và dễ hiểu trong mọi câu trả lời.
+
+3. Nếu ngữ cảnh không đủ để trả lời hoặc câu hỏi nằm ngoài phạm vi, thông báo rõ ràng cho người dùng và đề nghị họ 
+đặt lại câu hỏi hoặc cung cấp thêm thông tin.
+
+4. Khi cần trích dẫn, sử dụng dấu ngoặc kép và chỉ rõ nguồn (nếu có trong ngữ cảnh).
+
+5. Đối với mã nguồn hoặc ví dụ kỹ thuật, sử dụng cú pháp markdown với ``` và chỉ định ngôn ngữ.
+
+6. Tránh các câu trả lời mơ hồ hoặc chung chung. Luôn cố gắng cung cấp thông tin cụ thể và trực tiếp liên quan đến câu hỏi.
+
+7. Nếu một phần của câu hỏi không thể trả lời từ ngữ cảnh, hãy trả lời phần có thể và nêu rõ phần nào không có thông tin.
+
+8. Giữ giọng điệu chuyên nghiệp, lịch sự và hữu ích trong mọi tương tác.
+
+Mục tiêu cuối cùng là cung cấp thông tin chính xác, hữu ích và phù hợp với ngữ cảnh cho người dùng Việt Nam."""
         }
     ]
-    for message in conversation:
-        if isinstance(message, dict):
-            message = ConversationItem(**message)
-        messages.append({"role": message.role, "content": message.message})
     user_context = ""
     if context:
         context2 = [chunk.to_custom_string() for chunk in context]
@@ -40,7 +48,9 @@ def prepare_messages(queries: str, context: list[ChunkPayload], conversation: li
     messages.append(
         {
             "role": "user",
-            "content": f"Vui lòng trả lời truy vấn này: '{queries}' với ngữ cảnh được cung cấp sau: {user_context} nếu ngữ cảnh là rỗng thì trả lời nội dung câu hỏi mà tôi không biết, vui lòng thử lại bằng cách hỏi một câu hỏi khác",
+            "content": f"Hãy trả lời câu hỏi sau đây bằng tiếng Việt: '{queries}'. Dựa trên ngữ cảnh sau: {user_context}."
+                       f"Nếu ngữ cảnh trống, hãy trả lời: 'Tôi không có đủ thông tin để trả lời câu hỏi này. Xin vui "
+                       f"lòng cung cấp thêm chi tiết hoặc đặt một câu hỏi khác.'"
         }
     )
 
@@ -82,8 +92,8 @@ async def completions_with_backoff(**kwargs):
     return await client.chat.completions.create(**kwargs)
 
 
-async def generate_stream(queries: str, context: list, conversation: list):
-    messages = prepare_messages(queries, context, conversation)
+async def generate_stream(queries: str, context: list):
+    messages = prepare_messages(queries, context)
     print(messages)
     try:
         stream = await completions_with_backoff(

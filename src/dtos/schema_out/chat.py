@@ -5,12 +5,10 @@ from src.dtos.schema_out.common import BaseOutModel
 from src.dtos.schema_out.query import AnswerOut, QuestionOut
 
 
-# Query output model
 class QueryOut(BaseOutModel):
     query_id: UUID
     question: Optional[QuestionOut]
     answer: Optional[AnswerOut]
-    version: Optional[int]
 
 
 class ChatOut(BaseOutModel):

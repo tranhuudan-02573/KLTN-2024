@@ -1,5 +1,4 @@
 beanie 
-datasets 
 fastapi 
 passlib[bcrypt]
 fastapi_mail 
@@ -8,14 +7,11 @@ langchain
 langchain_community 
 langchain_text_splitters 
 motor 
-openai 
-pandas 
 pydantic 
 groq
 pydantic_settings 
 python-dotenv 
 redis[hiredis]
-tqdm 
 uvicorn 
 PyJWT
 Jinja2
@@ -30,3 +26,4 @@ transformers
 torch
 docx2txt
 prometheus-fastapi-instrumentator
+sentence-transformers==3.0.1

@@ -1,14 +1,8 @@
-# #######################################QUERYQUERYQUERYQUERYQUERYQUERYQUERYQUERYQUERYQUERY##############################################################
 from typing import Optional, List
 from uuid import UUID
 
 from pydantic import BaseModel
-from pydantic import Field, field_validator
-
-from src.utils.app_util import valid_file_or_folder_name
-
-
-# #######################################KNOWLEDGEKNOWLEDGEKNOWLEDGEKNOWLEDGEKNOWLEDGEKNOWLEDGE#############################################################
+from pydantic import Field
 
 
 class KnowledgeName(BaseModel):

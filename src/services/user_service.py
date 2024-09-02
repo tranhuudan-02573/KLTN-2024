@@ -1,4 +1,3 @@
-from typing import Optional, List, Tuple
 from uuid import UUID
 
 import pymongo
@@ -32,7 +31,6 @@ class UserService:
             user_in = User(
                 username=user.username,
                 email=user.email,
-                role=user.role,
                 first_name=user.first_name,
                 last_name=user.last_name,
                 disabled=user.disabled,
@@ -46,7 +44,6 @@ class UserService:
                 user_id=u.user_id,
                 username=u.username,
                 email=u.email,
-                role=u.role,
                 first_name=u.first_name,
                 last_name=u.last_name,
                 disabled=u.disabled,
@@ -70,7 +67,6 @@ class UserService:
                 user_id=u.user_id,
                 username=u.username,
                 email=u.email,
-                role=u.role,
                 first_name=u.first_name,
                 last_name=u.last_name,
                 disabled=u.disabled,
@@ -86,8 +82,6 @@ class UserService:
                 avatar=b.avatar,
                 description=b.description,
                 is_active=b.is_active,
-                persona_prompt=b.persona_prompt,
-                is_memory_enabled=b.is_memory_enabled,
                 updated_at=b.updated_at,
                 created_at=b.created_at
             ) for b in u.bots])
@@ -102,7 +96,6 @@ class UserService:
                 user_id=u.user_id,
                 username=u.username,
                 email=u.email,
-                role=u.role,
                 first_name=u.first_name,
                 last_name=u.last_name,
                 disabled=u.disabled,
@@ -157,4 +150,3 @@ class UserService:
         user.avatar = avatar_url
         user_i = await user.save()
         return UserOut(**user_i.dict())
-

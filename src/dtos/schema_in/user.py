@@ -4,7 +4,7 @@ from typing import Optional
 from pydantic import BaseModel, EmailStr, Field, constr
 
 from src.dtos.schema_in.common import PasswordMixin
-from src.models.all_models import UserRole, GenderType
+from src.models.all_models import GenderType
 
 
 class UserAuth(PasswordMixin):
@@ -16,7 +16,6 @@ class UserCreate(BaseModel):
     username: constr(min_length=5, max_length=50) = Field(..., description="user username")
     first_name: Optional[str] = Field(None, description="user first name")
     last_name: Optional[str] = Field(None, description="user last name")
-    role: UserRole = Field("user", description="user role")
     disabled: bool = Field(False, description="user disabled status")
     birth_date: Optional[datetime] = Field(None, description="user birth date")
     gender: Optional[GenderType] = Field(None, description="gender")

@@ -3,15 +3,13 @@ from uuid import UUID
 from fastapi import HTTPException
 
 from src.db_vector.weaviate_rag_non_tenant import search_in_knowledge_user
-from src.dtos.schema_in.query import QueryCreate, GeneratePayload, ChunkPayload, QueryUpdate
+from src.dtos.schema_in.query import QueryCreate, GeneratePayload, ChunkPayload
 from src.dtos.schema_out.chat import QueryChatOut, ChatOut
 from src.dtos.schema_out.query import QuestionOut, AnswerOut
-from src.models.all_models import Query, Question, User, ChunkSchema, Chat, Knowledge, Bot
+from src.models.all_models import Query, Question, User, ChunkSchema, Bot
 from src.services.bot_service import BotService
 from src.services.chat_service import ChatService
 from src.services.knowledge_service import KnowledgeService
-from src.utils.redis_util import convert_chat_history_to_items, set_user_history_chat, update_user_history_chat, \
-    delete_user_history_chat_by_query_id, delete_user_history_chat
 
 
 class QueryService:
@@ -29,7 +27,6 @@ class QueryService:
         context = [ChunkPayload(**chunk.dict()) for chunk in chunks]
         qa = Question(
             content=queryCreate.query,
-            prompt=bot.persona_prompt,
             role="user",
             chunks=chunks
         )
@@ -41,14 +38,11 @@ class QueryService:
         qs = await query.insert()
         chat.queries.append(qs)
         await chat.save()
-        set_user_history_chat(str(user.user_id), str(chat_id), queryCreate.query, "user", qs.query_id)
-        conversation = convert_chat_history_to_items(str(user.user_id), str(chat_id))
         rs = GeneratePayload(
             user_id=user.user_id,
             query_id=qs.query_id,
             query=queryCreate.query,
-            context=context,
-            conversation=conversation
+            context=context 
         )
         return rs
 
@@ -56,7 +50,6 @@ class QueryService:
     async def delete_for_chat(bot_id: UUID, user: User, chat_id: UUID, query_id: UUID):
         chat = ChatService.get_chat_for_bot(bot_id, user.id, chat_id)
         query = QueryService.get_query_for_chat(bot_id, user, chat_id, query_id)
-        delete_user_history_chat_by_query_id(str(user.user_id), str(chat_id), query.query_id)
         await query.delete()
         new = []
         item_removed = False
@@ -76,7 +69,6 @@ class QueryService:
         await Query.find(Query.chat.id == chat.id).delete()
         chat.queries = []
         await chat.save()
-        delete_user_history_chat(str(user.user_id), str(chat_id))
 
     @staticmethod
     async def get_query_for_chat(bot_id: UUID, user: User, chat_id: UUID, query_id: UUID) -> Query:

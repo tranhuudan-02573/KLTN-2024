@@ -12,7 +12,6 @@ from src.dtos.schema_out.knowledge import KnowledgeOut
 from src.dtos.schema_out.query import QuestionOut, AnswerOut
 from src.models.all_models import Chat, Bot, User, ChunkSchema
 from src.services.bot_service import BotService
-from src.utils.redis_util import convert_chat_history_to_items
 
 settings = get_settings()
 
@@ -80,8 +79,6 @@ class ChatService:
                 avatar=bot.avatar,
                 description=bot.description,
                 is_active=bot.is_active,
-                persona_prompt=bot.persona_prompt,
-                is_memory_enabled=bot.is_memory_enabled,
                 updated_at=bot.updated_at,
                 created_at=bot.created_at
             )
@@ -102,7 +99,6 @@ class ChatService:
         if not chat:
             raise HTTPException(status_code=404, detail="Chat not found")
         await chat.fetch_link(Chat.queries)
-        history = convert_chat_history_to_items(str(user_id.user_id), str(chat_id))
         return ChatListQueryOut(
             chat=ChatOut(
                 chat_id=chat.chat_id,
@@ -125,11 +121,9 @@ class ChatService:
                     completion_token=q.answer.completion_token,
                     total_time=q.answer.total_time
                 ),
-                version=q.version,
                 created_at=q.created_at,
                 updated_at=q.updated_at
-            ) for q in chat.queries],
-            history=history
+            ) for q in chat.queries] 
         )
 
     @staticmethod

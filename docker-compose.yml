@@ -3,22 +3,19 @@
 services:
   frontend:
     container_name: frontend
-    build:
-      context: .
-      dockerfile: Dockerfile2
-    image: kltn-frontend
-    volumes:
-      - './chat_text_web_demo:/app'
-      - '/app/node_modules'
+    image: huudan/kltn-reactjs:latest
     ports:
       - 3001:3001
     networks:
       - huudan
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:3001" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
   fastapi-service:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: kltn
+    image: huudan/kltn-fastapi:latest
     container_name: fastapi
     restart: unless-stopped
     depends_on:
@@ -37,13 +34,11 @@ services:
       retries: 3
     ports:
       - "8068:8068"
-    env_file:
+    env_file: 
       - .env
     networks:
       - huudan
-    volumes:
-      - ".:/usr/srv"
-    
+  
   minio:
     container_name: minio
     restart: unless-stopped
@@ -60,19 +55,19 @@ services:
     environment:
       MINIO_ROOT_USER: ${MINIO_ACCESS_KEY}
       MINIO_ROOT_PASSWORD: ${MINIO_SECRET_ACCESS_KEY}
-      MINIO_CACHE_QUOTA: 80 # 80% of the drive will be used for caching
-      MINIO_CACHE_AFTER: 1 # Object will be cached after the first request to it
-      MINIO_CACHE_WATERMARK_LOW: 70 # Least accessed objects will be erased after the cache disk reaches the 70% watermark
+      MINIO_CACHE_QUOTA: 80
+      MINIO_CACHE_AFTER: 1
+      MINIO_CACHE_WATERMARK_LOW: 70
       MINIO_CACHE_WATERMARK_HIGH: 90
       MINIO_PROMETHEUS_AUTH_TYPE: public
-      MINIO_CACHE=: "on"
+      MINIO_CACHE: "on"
       MINIO_CACHE_DRIVES: /mnt/drive1,/mnt/drive2
     command: server /data --console-address ":9001"
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:9000/minio/health/live" ]
       interval: 30s
       timeout: 20s
-      retries: 3
+      retries: 5
 
   minio-bucket:
     image: minio/mc
@@ -88,6 +83,8 @@ services:
       /usr/bin/mc policy download kltn2024/file-storage;
       exit 0;
       "
+    restart: on-failure
+
   redis-exporter:
     image: oliver006/redis_exporter
     ports:
@@ -100,6 +97,13 @@ services:
       - huudan
     depends_on:
       - redis
+    healthcheck:
+      test: [ "CMD", "wget", "-q", "--spider", "http://localhost:9121/metrics" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
   redis:
     image: redis:latest
     container_name: redis
@@ -128,11 +132,13 @@ services:
       - redis-insight:/data
   
   reranker-transformers:
-    image: cr.weaviate.io/semitechnologies/reranker-transformers:cross-encoder-ms-marco-MiniLM-L-6-v2
+    image: cr.weaviate.io/semitechnologies/reranker-transformers:baai-bge-reranker-v2-m3
     environment:
       ENABLE_CUDA: '0'
     networks:
       - huudan
+    restart: unless-stopped
+
   weaviate:
     command:
       - --host
@@ -169,9 +175,10 @@ services:
       - huudan
     healthcheck:
       test: [ "CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/v1/.well-known/ready" ]
-      interval: 10s
-      timeout: 5s
+      interval: 45s
+      timeout: 20s
       retries: 5
+
   prometheus:
     image: prom/prometheus:v2.46.0
     volumes:
@@ -195,6 +202,13 @@ services:
         condition: service_started
     networks:
       - huudan
+    healthcheck:
+      test: [ "CMD", "wget", "-q", "--spider", "http://localhost:9090/-/healthy" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
   grafana:
     image: grafana/grafana-oss
     ports:
@@ -213,6 +227,13 @@ services:
         condition: service_healthy
     networks:
       - huudan
+    healthcheck:
+      test: [ "CMD", "wget", "-q", "--spider", "http://localhost:3000/api/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
   mongodb_exporter:
     image: percona/mongodb_exporter:0.40
     container_name: mongodb_exporter
@@ -235,6 +256,25 @@ services:
     depends_on:
       mongodb:
         condition: service_healthy
+    healthcheck:
+      test: [ "CMD", "wget", "-q", "--spider", "http://localhost:9216/metrics" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+  ngrok:
+    image: wernight/ngrok
+    ports:
+      - 4041:4040
+    env_file:
+      - .env
+    environment:
+      NGROK_AUTH: ${NGROK_API_KEY}
+      NGROK_PROTOCOL: http
+      NGROK_PORT: frontend:3001
+    depends_on:
+      - frontend
+    networks:
+      - huudan
   mongodb:
     container_name: mongodb
     image: mongo:latest
@@ -258,9 +298,9 @@ services:
       - huudan
     healthcheck:
       test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
-      interval: 30s
-      timeout: 10s
-      retries: 3
+      interval: 45s
+      timeout: 20s
+      retries: 5
 
 networks:
   huudan:

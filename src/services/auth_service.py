@@ -8,7 +8,7 @@ from fastapi import HTTPException, status
 from src.config.app_config import get_settings
 from src.db_vector.weaviate_rag_non_tenant import get_weaviate_client, create_for_user
 from src.dtos.schema_in.user import UserAuth
-from src.models.all_models import User, UserRole, Auth
+from src.models.all_models import User, Auth
 from src.services.jwt_service import get_password, verify_password, logout
 from src.utils.app_util import get_random_avatar, unique_string, generate_unique_code, generate_username
 from src.utils.redis_util import update, reset, is_allowed
@@ -52,7 +52,6 @@ class AuthService:
                 username=username,
                 email=user.email,
                 hashed_password=get_password(user.password),
-                role=UserRole.USER,
                 auth=auth,
                 avatar=get_random_avatar()
             )

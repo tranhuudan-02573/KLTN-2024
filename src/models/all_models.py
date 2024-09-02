@@ -26,12 +26,6 @@ class BaseDocument(Document):
         use_state_management = True
 
 
-class UserRole(str, Enum):
-    ADMIN = "admin"
-    USER = "user"
-    SYSTEM = "system"
-
-
 class GenderType(str, Enum):
     FEMALE = "nu"
     MALE = "nam"
@@ -55,7 +49,6 @@ class User(BaseDocument):
     first_name: Optional[str] = None
     last_name: Optional[str] = None
     disabled: Optional[bool] = Field(default=True)
-    role: Optional[UserRole] = Field(default=UserRole.USER)
     gender: Optional[GenderType] = None
     birth_date: Optional[datetime] = None
     auth: Optional[Auth] = None
@@ -77,7 +70,6 @@ class User(BaseDocument):
     class Settings:
         name = "users"
         indexes = [
-            "role",
             "user_id",
         ]
 
@@ -144,11 +136,6 @@ class Bot(BaseDocument):
     avatar: Optional[str] = None
     description: Optional[str] = Field(max_length=500)
     is_active: Optional[bool] = Field(default=True)
-    persona_prompt: Optional[str] = Field(max_length=1000,
-                                          default="bạn là một trợ lý ảo của bạn chuyên sử dụng các thông tin văn bản "
-                                                  "từ tài liệu của mình để trả lời câu hỏi của tôi một cách chính xác "
-                                                  "và ngắn gọn")
-    is_memory_enabled: Optional[bool] = Field(default=False)
     owner: Optional[Link['User']]
     knowledges: Optional[List[Link['Knowledge']]] = Field(default_factory=list)
     chats: Optional[List[Link['Chat']]] = Field(default_factory=list)
@@ -188,7 +175,7 @@ class Chat(BaseDocument):
 
 class Answer(BaseDocument):
     answer_id: UUID = Field(default_factory=uuid4, unique=True)
-    content: Optional[str] = Field(max_length=1000)
+    content: Optional[str] = Field(max_length=10000)
     prompt_token: Optional[int] = None
     completion_token: Optional[int] = None
     role: Optional[str] = Field(default="assistant")
@@ -203,7 +190,6 @@ class Answer(BaseDocument):
 
 class Question(BaseDocument):
     question_id: UUID = Field(default_factory=uuid4, unique=True)
-    prompt: Optional[str] = Field(max_length=1000)
     content: Optional[str] = Field(max_length=1000)
     role: Optional[str] = Field(default="user")
     chunks: Optional[List[ChunkSchema]] = Field(default_factory=list)
@@ -221,14 +207,12 @@ class Query(BaseDocument):
     chat: Optional[Link['Chat']]
     question: Optional[Link['Question']]
     answer: Optional[Link['Answer']] = None
-    version: Optional[int] = Field(ge=0, default=0)
     created_at: Optional[datetime] = Field(default_factory=datetime.now)
     updated_at: Optional[datetime] = Field(default_factory=datetime.now)
 
     @before_event([Replace, Save])
     def set_updated_at(self):
         self.updated_at = datetime.now()
-        self.version += 1
 
     @before_event([Insert])
     def set_created_at(self):

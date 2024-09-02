@@ -10,13 +10,6 @@ from src.dtos.schema_out.common import BaseOutModel
 from src.dtos.schema_out.knowledge import KnowledgeOut
 
 
-# Enum classes for UserRole and GenderType
-class UserRole(str, Enum):
-    ADMIN = "admin"
-    USER = "user"
-    SYSTEM = "system"
-
-
 class GenderType(str, Enum):
     FEMALE = "nu"
     MALE = "nam"
@@ -29,7 +22,6 @@ class UserOut(BaseOutModel):
     first_name: Optional[str]
     last_name: Optional[str]
     disabled: Optional[bool]
-    role: Optional[str]
     gender: Optional[GenderType]
     birth_date: Optional[datetime]
     avatar: Optional[str]

@@ -52,8 +52,6 @@ class BotService:
             avatar=b.avatar,
             description=b.description,
             is_active=b.is_active,
-            persona_prompt=b.persona_prompt,
-            is_memory_enabled=b.is_memory_enabled,
             updated_at=b.updated_at,
             created_at=b.created_at
         )
@@ -66,8 +64,6 @@ class BotService:
         bot.name = data.name if data.name else bot.name
         bot.description = data.description if data.description else bot.description
         bot.is_active = data.active if data.active is not None else bot.is_active
-        bot.persona_prompt = data.prompt if data.prompt else bot.persona_prompt
-        bot.is_memory_enabled = data.memory if data.memory is not None else bot.is_memory_enabled
         await bot.save()
         return BotOut(**bot.dict())
 
@@ -182,8 +178,6 @@ class BotService:
                 avatar=b.avatar,
                 description=b.description,
                 is_active=b.is_active,
-                persona_prompt=b.persona_prompt,
-                is_memory_enabled=b.is_memory_enabled,
                 updated_at=b.updated_at,
                 created_at=b.created_at
             ),

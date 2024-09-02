@@ -1,5 +1,3 @@
-# #######################################QUERYQUERYQUERYQUERYQUERYQUERYQUERYQUERYQUERYQUERY##############################################################
-from typing import Optional
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -11,11 +9,6 @@ class QueryCreate(BaseModel):
 
 class QueryUpdate(BaseModel):
     query: str
-
-
-class ConversationItem(BaseModel):
-    message: str
-    role: str
 
 
 class ChunkPayload(BaseModel):
@@ -36,4 +29,3 @@ class GeneratePayload(BaseModel):
     query_id: UUID
     query: str
     context: list[ChunkPayload]
-    conversation: list[ConversationItem]

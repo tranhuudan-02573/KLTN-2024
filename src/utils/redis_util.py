@@ -1,13 +1,9 @@
-import json
-import time
 from datetime import timedelta, datetime
-from typing import Any, Awaitable, List, Dict
-from uuid import UUID
+from typing import Any, Awaitable
 
 import redis
 
 from src.config.app_config import get_settings
-from src.dtos.schema_in.query import ConversationItem
 
 settings = get_settings()
 redis_client = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT,
@@ -64,64 +60,3 @@ def get_user_token_from_redis(user_id: str, token_type: str) -> tuple[Awaitable,
 def delete_user_token_from_redis(user_id: str, token_type: str):
     key = f"user:{user_id}:{token_type}"
     redis_client.delete(key)
-
-
-def set_user_history_chat(user_id: str, chat_id: str, message: str, role: str, query_id: UUID, max_length: int = 50):
-    key = f"user:{user_id}:chat:{chat_id}"
-    chat_entry = {
-        "query_id": str(query_id),
-        "message": message,
-        "role": role,
-        "timestamp": int(time.time())
-    }
-    with redis_client.pipeline() as pipe:
-        pipe.rpush(key, json.dumps(chat_entry))
-        pipe.ltrim(key, -max_length, -1)
-        pipe.execute()
-
-
-def get_user_history_chat(user_id: str, chat_id: str, limit: int = 10) -> List[Dict]:
-    key = f"user:{user_id}:chat:{chat_id}"
-    chat_history = redis_client.lrange(key, -limit, -1)
-    chat_history = [json.loads(entry) for entry in chat_history]
-    return chat_history
-
-
-def convert_chat_history_to_items(user_id: str, chat_id: str, limit: int = 10) -> List[ConversationItem]:
-    chat_history = get_user_history_chat(user_id, chat_id, limit)
-    conversation_items = [
-        ConversationItem(message=entry['message'], role=entry['role'])
-        for entry in chat_history
-    ]
-    return conversation_items
-
-
-def update_user_history_chat(user_id: str, chat_id: str, query_id: UUID, new_message: str, role: str) -> bool:
-    key = f"user:{user_id}:chat:{chat_id}"
-    chat_history = redis_client.lrange(key, 0, -1)
-
-    for index, entry in enumerate(chat_history):
-        chat_entry = json.loads(entry)
-        if chat_entry['query_id'] == str(query_id) and chat_entry['role'] == role:
-            chat_entry['message'] = new_message
-            redis_client.lset(key, index, json.dumps(chat_entry))
-            return True
-    return False
-
-
-def delete_user_history_chat_by_query_id(user_id: str, chat_id: str, query_id: UUID):
-    key = f"user:{user_id}:chat:{chat_id}"
-    chat_history = redis_client.lrange(key, 0, -1)
-    for entry in chat_history:
-        chat_entry = json.loads(entry)
-        if chat_entry['query_id'] == str(query_id):
-            redis_client.lrem(key, 1, entry)
-
-
-def delete_user_history_chat(user_id: str, chat_id: str):
-    key = f"user:{user_id}:chat:{chat_id}"
-    redis_client.delete(key)
-
-
-if __name__ == '__main__':
-    print(convert_chat_history_to_items("e3e556eb-273b-4ed4-9021-a0ba90c3c42c", "3bad30e8-ac66-4103-b5df-2c9c00eac45a"))
