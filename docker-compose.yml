@@ -261,20 +261,6 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-  ngrok:
-    image: wernight/ngrok
-    ports:
-      - 4041:4040
-    env_file:
-      - .env
-    environment:
-      NGROK_AUTH: ${NGROK_API_KEY}
-      NGROK_PROTOCOL: http
-      NGROK_PORT: frontend:3001
-    depends_on:
-      - frontend
-    networks:
-      - huudan
   mongodb:
     container_name: mongodb
     image: mongo:latest
